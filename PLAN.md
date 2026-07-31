@@ -50,6 +50,8 @@ Status legend: **[Done]** implemented and verified · **[Planned]** designed, no
 - **D9 [Done]. Licenses**: model attribution (NVIDIA + mweinbach1, CC-BY-4.0) in the README and in-app ("About" screen). Code is Apache-2.0.
 - **D10 [Done]. Storage & persistence — local only** (see §4a): history, settings and the model cache live in **Application Support** (non-purgeable). No cloud sync — history stays on the device by design (privacy). iOS deletes the sandbox on app uninstall, so data does not survive deletion (accepted trade-off for local-only).
 - **D11 [Done]. Onboarding & model gating** (see §4c): onboarding is **mandatory** — during the testing phase it appears **on every launch** (later: show-once). Transcription is **blocked until the model is downloaded**; the UI always guides the user ("download the model in Settings") instead of failing silently.
+- **D12 [Done]. Audio level normalization** (à la TypeWhisper `MicrophoneBoostProcessor`): `AudioNormalizer` boosts quiet mic input to `targetRMS = 0.1` (gain 1–20, clamped) before transcription — fixes distorted words from the raw `.measurement`-mode capture.
+- **D13 [Done]. Corrections dictionary**: user-editable "heard as → should be" map (`CorrectionsStore`), applied as whole-word case-insensitive regex on new transcriptions. Cheap post-process layer; the heavy **CTC vocabulary boosting** (context biasing) is deferred to Phase 2 (see §5).
 
 ---
 
@@ -129,6 +131,22 @@ Mandatory, skippable introduction. **Three steps**, native horizontal paging (`T
 - **Step 3 — Privacy:** one-line promise — transcriptions are never used to train models and everything stays on the device; **screenshot placeholder** (real screenshot added later).
 - **Controls:** Skip (always available) / Continue / Finish. Skipping always leads to the main app; the download keeps running.
 - **Interruptions:** if the app is killed mid-download, the download resumes on next launch; on failure show a message and re-show onboarding (or guide to Settings).
+
+### §4d. Post-processing pipeline (planned — modeled on TypeWhisper `PostProcessingPipeline`)
+
+Priority-ordered text steps applied to every new transcription, in order. Earlier steps get cleaner input; later steps fix the rest.
+
+| Prio | Step | Status | Notes |
+|---|---|---|---|
+| 100 | **Number normalization** (PL + EN) | TODO | "dwa tysiące trzysta" / "two hundred" → digits. Needs per-language number-word parsers (à la TypeWhisper `NumberNormalization/*`). |
+| 200 | **Speech punctuation** | TODO | Re-punctuation strategy per engine/language (TypeWhisper `SpeechPunctuationService`). Low priority — Parakeet already punctuates. |
+| 300 | **LLM correction** | Phase 2 | On-device/cloud LLM rewrites the transcript for fluency + mixed-language fixes. TypeWhisper runs it mid-pipeline (priority 300) with provider fallback order. |
+| 500 | **Snippets** | ❌ Rejected | Text shortcuts — out of scope. |
+| 600 | **Corrections dictionary** | ✅ D13 | "heard as → should be", user-editable, whole-word case-insensitive (optionally exact-case). |
+| — | **Audio level normalization** | ✅ D12 | `AudioNormalizer` boost before decode (TypeWhisper `MicrophoneBoostProcessor`). |
+| — | **CTC vocabulary boosting** | Phase 2 | Context biasing of the decoder with user/prompt terms (TypeWhisper `CtcKeywordSpotter` + `VocabularyRescorer`). |
+
+**Prompt / context boosting (planned, Phase 2):** a user-provided *prompt* (e.g. the topic or expected terms) is parsed into boosting terms and fed to the decoder context-bias step — exactly TypeWhisper's `configureBoostingIfNeeded(prompt:dictionaryTermHints:)` (terms from the prompt when no explicit dictionary hints are set). The prompt also feeds the LLM correction step (step 300) as context.
 - **Model states (persisted):** `notDownloaded` → `downloading(progress)` → `ready` | `failed`. Transcription is blocked until `ready`.
 
 ---
@@ -142,7 +160,7 @@ Mandatory, skippable introduction. **Three steps**, native horizontal paging (`T
 | **M2 — App Group** | **Done** | Shared App Group container (`group.piszeprogramy.openWhisper`); model cache + SwiftData store moved; `OpenWhisperShared` package extracted | Store and model cache live in the group container (verified on simulator) |
 | **Phase 1.5 — Keyboard** | Planned | `OpenWhisperKeyboard`: recent transcriptions, insert into active field; spike: transcription inside the extension (ANE memory feasibility) | Works in any app with text input; feasibility report |
 | **M4 — Release** | Planned | App icon, Polish/English UI, real video/screenshot assets, on-device testing, privacy policy, App Store (free) | App in review / on the store |
-| **Phase 2 — Notepad** | Planned | Separate spec (TBD): notepad + LLM for on-the-fly transcription correction | — |
+| **Phase 2 — Notepad** | Planned | Separate spec (TBD): notepad + LLM for on-the-fly transcription correction. **Extends to dictation quality:** if the corrections dictionary (D13) + LLM correction aren't enough for mixed-language / code-switched words, add **CTC vocabulary boosting** (context biasing): download a separate ~110M CTC keyword-spotter model (à la TypeWhisper's Parakeet plugin) and port `CtcKeywordSpotter` + `VocabularyRescorer` into the vendored decoder to bias it toward user dictionary terms. Stacked on top of D13 — the two compose (boost during decode, corrections on text after) | — |
 
 ---
 

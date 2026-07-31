@@ -11,15 +11,23 @@ enum TranscriptionValidator {
 
     static func cleanedText(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        var cleaned = trimmed
+        let collapsed = trimmed.replacingOccurrences(
+            of: "\\s{2,}",
+            with: " ",
+            options: .regularExpression
+        )
+        var cleaned = collapsed
         while cleaned.last == "." {
             cleaned.removeLast()
         }
-        if cleaned != trimmed,
+        if cleaned != collapsed,
            let last = cleaned.unicodeScalars.last,
            CharacterSet.alphanumerics.contains(last) {
             cleaned.append(".")
         }
+        cleaned = cleaned
+            .replacingOccurrences(of: " (?=[,;:.!?])", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         return cleaned
     }
 }

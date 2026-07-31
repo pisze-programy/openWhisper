@@ -2,23 +2,17 @@
 import PackageDescription
 
 // ─────────────────────────────────────────────────────────────────────────
-// VENDORED COPY — OpenWhisper
+// parakeet-coreml-ios — maintained fork of mweinbach/parakeet-coreml-swift.
 //
-// This package is vendored from upstream https://github.com/mweinbach/
-// parakeet-coreml-swift @ 0.1.1 because Xcode refuses to link packages
-// that use `.unsafeFlags` into an app target ("uses unsafe build flags").
-// The only change vs. upstream is the removal of the forced `-O` flag
-// below. Keep this file otherwise identical to upstream to make future
-// syncs trivial.
-//
-// Performance note: without the forced `-O`, the library builds at the
-// normal project optimization level — `-O` in Release (App Store), and
-// `-Onone` in Debug, which makes Debug transcription slower but still
-// usable (≈40× real-time factor instead of ≈400×).
+// Performance note: the upstream build forces `-O` via `.unsafeFlags`, which
+// Xcode refuses to link into an app target. This fork drops the forced flag:
+// the library builds at the normal project optimization level — `-O` in
+// Release (App Store), `-Onone` in Debug (≈40× real-time instead of ≈400×).
+// See Changes.md for the full list of modifications.
 // ─────────────────────────────────────────────────────────────────────────
 
 let package = Package(
-    name: "ParakeetCoreML",
+    name: "ParakeetCoreMLiOS",
     platforms: [
         .macOS(.v14),
         .iOS(.v17),

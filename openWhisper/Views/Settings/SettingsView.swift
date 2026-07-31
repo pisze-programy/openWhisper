@@ -36,6 +36,8 @@ struct SettingsView: View {
 
             SettingsLanguageSection()
 
+            SettingsDictionarySection()
+
             Section {
                 NavigationRow(title: "Notepad & smart corrections", subtitle: "Phase 2")
                     .disabled(true)

@@ -22,6 +22,7 @@ public enum GreedyTDTDecoder {
         public let tokenIds: [Int]
         public let frameIndices: [Int]
         public let durations: [Int]
+        public let confidence: Float
         /// Wall-clock time spent inside ``runner.runDecoderStep()`` +
         /// ``runner.runJoint()`` plus the argmax + state copies.
         public let elapsedSeconds: Double
@@ -80,6 +81,8 @@ public enum GreedyTDTDecoder {
         var tokens = [Int]()
         var frameIdx = [Int]()
         var durationOut = [Int]()
+        var confidenceSum: Float = 0
+        var confidenceSteps = 0
 
         /// True once we've written a valid ``decoder_hidden[:, -1, :]``
         /// slice into the joint's persistent ``decoder_state`` buffer. If
@@ -127,10 +130,12 @@ public enum GreedyTDTDecoder {
                 // returned to the pool before we loop.
                 let (tokenId, durIdx): (Int, Int) = try autoreleasepool {
                     let jointOut = try worker.runJoint()
-                    return (
-                        argmax(jointOut.tokenLogits),
-                        argmax(jointOut.durationLogits)
-                    )
+                    let tokenStats = argmaxStats(jointOut.tokenLogits)
+                    let durIdx = argmax(jointOut.durationLogits)
+                    let margin = tokenStats.maxValue - tokenStats.mean
+                    confidenceSum += 1 / (1 + expf(-margin))
+                    confidenceSteps += 1
+                    return (tokenStats.index, durIdx)
                 }
                 let duration = durations[durIdx]
 
@@ -154,11 +159,15 @@ public enum GreedyTDTDecoder {
             if !advanced { t += 1 }
         }
         let elapsed = Date().timeIntervalSince(start)
+        let confidence = confidenceSteps > 0
+            ? confidenceSum / Float(confidenceSteps)
+            : 0
 
         return Output(
             tokenIds: tokens,
             frameIndices: frameIdx,
             durations: durationOut,
+            confidence: confidence,
             elapsedSeconds: elapsed
         )
     }
@@ -185,5 +194,19 @@ public enum GreedyTDTDecoder {
         var idx: vDSP_Length = 0
         vDSP_maxvi(ptr, 1, &maxVal, &idx, n)
         return Int(idx)
+    }
+
+    @inline(__always)
+    static func argmaxStats(
+        _ array: MLMultiArray
+    ) -> (index: Int, maxValue: Float, mean: Float) {
+        let n = vDSP_Length(array.count)
+        let ptr = UnsafePointer<Float32>(OpaquePointer(array.dataPointer))
+        var maxVal: Float = 0
+        var idx: vDSP_Length = 0
+        vDSP_maxvi(ptr, 1, &maxVal, &idx, n)
+        var sum: Float = 0
+        vDSP_sve(ptr, 1, &sum, n)
+        return (Int(idx), maxVal, sum / Float(n))
     }
 }

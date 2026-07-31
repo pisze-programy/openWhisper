@@ -1,22 +1,4 @@
-# Swift / SwiftPM
 .build/
 .swiftpm/
 Package.resolved
-*.xcodeproj/
-DerivedData/
-
-# Artifacts downloaded at runtime
-Models/
-models/
-
-# macOS
 .DS_Store
-
-# Editor
-.vscode/
-.idea/
-*.swp
-
-# Logs / scratch
-*.log
-/tmp/

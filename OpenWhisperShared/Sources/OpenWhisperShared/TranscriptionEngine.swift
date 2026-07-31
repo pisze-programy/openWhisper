@@ -20,21 +20,16 @@ public final class TranscriptionEngine: @unchecked Sendable {
     }
 
     public func transcribe(audioURL: URL, computeUnits: ParakeetComputeUnits) throws -> Transcription {
-        do {
-            return try queue.sync {
-                let transcriber = try makeTranscriber(computeUnits: computeUnits)
-                return try transcriber.transcribe(audioURL: audioURL)
-            }
-        } catch {
-            throw Self.map(error)
-        }
+        let samples = try AudioLoader.loadMono16k(at: audioURL)
+        return try transcribe(samples: samples, computeUnits: computeUnits)
     }
 
     public func transcribe(samples: [Float], computeUnits: ParakeetComputeUnits) throws -> Transcription {
+        let normalized = AudioNormalizer.process(samples)
         do {
             return try queue.sync {
                 let transcriber = try makeTranscriber(computeUnits: computeUnits)
-                return try transcriber.transcribe(samples: samples)
+                return try transcriber.transcribe(samples: normalized)
             }
         } catch {
             throw Self.map(error)

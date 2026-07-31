@@ -10,6 +10,7 @@ struct HistoryView: View {
     @Environment(TranscriptionService.self) private var transcription
     @Environment(AudioRecorder.self) private var recorder
     @Environment(ToastCenter.self) private var toast
+    @Environment(CorrectionsStore.self) private var corrections
 
     @Query(sort: \TranscriptionItem.createdAt, order: .reverse)
     private var items: [TranscriptionItem]
@@ -19,6 +20,9 @@ struct HistoryView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isHandlingRecording = false
+
+    private static let shortClipMaxDuration: TimeInterval = 1.0
+    private static let confidenceGateThreshold: Float = 0.55
 
     var body: some View {
         NavigationStack {
@@ -246,7 +250,14 @@ struct HistoryView: View {
     private func transcribe(url: URL) async {
         do {
             let result = try await transcription.transcribe(audioURL: url)
-            let text = TranscriptionValidator.cleanedText(result.text)
+            if result.audioDuration < Self.shortClipMaxDuration
+                && result.confidence < Self.confidenceGateThreshold
+            {
+                try? FileManager.default.removeItem(at: url)
+                toast.present("No speech detected")
+                return
+            }
+            let text = TranscriptionValidator.cleanedText(corrections.apply(to: NumberNormalizer.normalize(SpeechPunctuation.normalize(result.text))))
             guard TranscriptionValidator.isMeaningful(text) else {
                 try? FileManager.default.removeItem(at: url)
                 toast.present("No speech detected")

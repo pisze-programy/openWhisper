@@ -22,6 +22,7 @@ enum Pipeline {
         var tokens: [Int]
         var frames: [Int]
         var durations: [Int]
+        var confidence: Float
         var melElapsed: Double
         var encoderElapsed: Double
         var decodeElapsed: Double
@@ -35,6 +36,7 @@ enum Pipeline {
         if chunks.isEmpty {
             return Result(
                 tokens: [], frames: [], durations: [],
+                confidence: 0,
                 melElapsed: 0, encoderElapsed: 0, decodeElapsed: 0
             )
         }
@@ -122,6 +124,7 @@ enum Pipeline {
                             tokenIds: decoded.tokenIds,
                             frameIndices: decoded.frameIndices,
                             durations: decoded.durations,
+                            confidence: decoded.confidence,
                             encoderFrames: item.hidden.shape[1].intValue
                         )
                     )
@@ -144,6 +147,7 @@ enum Pipeline {
         var tokens = [Int]()
         var frames = [Int]()
         var durations = [Int]()
+        var confidenceSum: Float = 0
         var totalFrameOffset = 0
         for chunk in results.ordered(count: chunks.count) {
             tokens.append(contentsOf: chunk.tokenIds)
@@ -151,6 +155,7 @@ enum Pipeline {
                 contentsOf: chunk.frameIndices.map { $0 + totalFrameOffset }
             )
             durations.append(contentsOf: chunk.durations)
+            confidenceSum += chunk.confidence
             totalFrameOffset += chunk.encoderFrames
         }
 
@@ -158,6 +163,7 @@ enum Pipeline {
             tokens: tokens,
             frames: frames,
             durations: durations,
+            confidence: confidenceSum / Float(chunks.count),
             melElapsed: melTotal.value,
             encoderElapsed: encTotal.value,
             decodeElapsed: decodeTotal.value
@@ -182,6 +188,7 @@ private struct ChunkResult {
     let tokenIds: [Int]
     let frameIndices: [Int]
     let durations: [Int]
+    let confidence: Float
     let encoderFrames: Int
 }
 

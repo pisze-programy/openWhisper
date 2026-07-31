@@ -246,7 +246,8 @@ public final class ParakeetTranscriber {
                 encoder: result.encoderElapsed,
                 decoderLoop: result.decodeElapsed,
                 detokenize: detokElapsed
-            )
+            ),
+            confidence: result.confidence
         )
     }
 

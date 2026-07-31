@@ -3,10 +3,12 @@ import Foundation
 public struct TranscriptionResult: Sendable {
     public let text: String
     public let audioDuration: TimeInterval
+    public let confidence: Float
 
-    public init(text: String, audioDuration: TimeInterval) {
+    public init(text: String, audioDuration: TimeInterval, confidence: Float = 0) {
         self.text = text
         self.audioDuration = audioDuration
+        self.confidence = confidence
     }
 }
 

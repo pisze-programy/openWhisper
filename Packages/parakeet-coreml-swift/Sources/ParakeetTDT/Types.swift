@@ -59,6 +59,7 @@ public struct Transcription: Sendable {
     public let frameIndices: [Int]
     /// Per-token duration value (in encoder frames) predicted by the joint.
     public let durations: [Int]
+    public let confidence: Float
     /// Wall-clock audio duration (seconds).
     public let audioDurationSeconds: Double
     /// Wall-clock inference duration (seconds). Excludes model load time.
@@ -71,6 +72,26 @@ public struct Transcription: Sendable {
         inferenceDurationSeconds > 0
             ? audioDurationSeconds / inferenceDurationSeconds
             : 0
+    }
+
+    public init(
+        text: String,
+        tokenIds: [Int],
+        frameIndices: [Int],
+        durations: [Int],
+        audioDurationSeconds: Double,
+        inferenceDurationSeconds: Double,
+        timing: TranscriptionTiming,
+        confidence: Float = 0.0
+    ) {
+        self.text = text
+        self.tokenIds = tokenIds
+        self.frameIndices = frameIndices
+        self.durations = durations
+        self.confidence = confidence
+        self.audioDurationSeconds = audioDurationSeconds
+        self.inferenceDurationSeconds = inferenceDurationSeconds
+        self.timing = timing
     }
 }
 

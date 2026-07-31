@@ -66,7 +66,8 @@ final class TranscriptionService {
         }.value
         return TranscriptionResult(
             text: transcription.text,
-            audioDuration: transcription.audioDurationSeconds
+            audioDuration: transcription.audioDurationSeconds,
+            confidence: transcription.confidence
         )
     }
 }
