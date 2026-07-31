@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A tappable-looking row with an optional subtitle and a trailing chevron.
 struct NavigationRow: View {
     let title: String
     var subtitle: String? = nil

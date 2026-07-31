@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A settings row with a title and a right-aligned native toggle.
 struct ToggleRow: View {
     let title: String
     @Binding var isOn: Bool

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Small uppercase secondary section heading.
 struct SectionHeader: View {
     let title: String
 

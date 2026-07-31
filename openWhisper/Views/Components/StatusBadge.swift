@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Compact capsule showing the model download state with an SF Symbol and short label.
 struct StatusBadge: View {
     let status: ModelStatus
 

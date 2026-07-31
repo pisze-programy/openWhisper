@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Centered empty-state placeholder: icon, title, subtitle.
 struct EmptyState: View {
     let systemImage: String
     let title: String

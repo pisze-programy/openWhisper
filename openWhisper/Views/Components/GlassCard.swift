@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A reusable frosted-glass card: rounded corners, ultra-thin material, subtle shadow.
-/// This is the only place glass styling is applied — never ad hoc per screen.
 struct GlassCard<Content: View>: View {
     private let content: Content
 

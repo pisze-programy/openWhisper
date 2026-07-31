@@ -2,8 +2,6 @@ import SwiftUI
 import SwiftData
 import UIKit
 
-/// Main screen: transcription history + record control.
-/// For now this view is the coordinator for the record → transcribe → copy/save flow.
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(SettingsStore.self) private var settings
@@ -17,16 +15,13 @@ struct HistoryView: View {
     @State private var showClearConfirm = false
     @State private var showError = false
     @State private var errorMessage = ""
-    /// True from the moment the recorder stops until transcription of that
-    /// recording finishes; keeps a second tap (or auto-stop) from racing the
-    /// same temp file.
     @State private var isHandlingRecording = false
 
     var body: some View {
         NavigationStack {
             List {
                 ForEach(items) { item in
-                    TranscriptionRow(item: item)
+                    HistoryRow(item: item)
                         .contentShape(Rectangle())
                         .onTapGesture { copy(item) }
                 }
@@ -78,12 +73,9 @@ struct HistoryView: View {
             }
         }
         .task {
-            // 10-minute cap: the recorder calls this when it auto-stops.
             recorder.onAutoStop = { stopAndTranscribe() }
         }
     }
-
-    // MARK: - Record control
 
     private var recordSection: some View {
         VStack(spacing: 10) {
@@ -138,7 +130,7 @@ struct HistoryView: View {
                         .buttonStyle(.plain)
                         .disabled(!modelDownload.isReady || isHandlingRecording)
 
-                        Text(recorder.isRecording ? formatTime(recorder.elapsed) : "Tap to record")
+                        Text(recorder.isRecording ? recorder.elapsed.clockString : "Tap to record")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
@@ -149,8 +141,6 @@ struct HistoryView: View {
             }
         }
     }
-
-    // MARK: - Actions
 
     private func startRecording() {
         guard modelDownload.isReady, !transcription.isTranscribing, !isHandlingRecording else { return }
@@ -163,12 +153,8 @@ struct HistoryView: View {
         }
     }
 
-    /// Stops the recorder (if running) and kicks off transcription.
     private func stopAndTranscribe() {
         guard recorder.isRecording, !transcription.isTranscribing, !isHandlingRecording else { return }
-        // Claim the flow synchronously, before any await, so a second tap (or
-        // a race with auto-stop) can't start a second transcription that
-        // deletes the same temp file.
         isHandlingRecording = true
         do {
             let url = try recorder.stop()
@@ -182,7 +168,6 @@ struct HistoryView: View {
         }
     }
 
-    /// Records → transcribe → auto-copy → (optionally) save to history.
     private func transcribe(url: URL) async {
         do {
             let result = try await transcription.transcribe(audioURL: url)
@@ -201,8 +186,6 @@ struct HistoryView: View {
         } catch {
             present(error)
         }
-        // The engine has read the recording (or already failed to); the temp
-        // file is no longer needed.
         try? FileManager.default.removeItem(at: url)
     }
 
@@ -237,25 +220,4 @@ struct HistoryView: View {
         errorMessage = error.localizedDescription
         showError = true
     }
-}
-
-/// A single history row: text preview + "date · duration" caption.
-private struct TranscriptionRow: View {
-    let item: TranscriptionItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.text)
-                .lineLimit(3)
-            Text("\(item.createdAt.formatted(date: .abbreviated, time: .shortened)) · \(formatTime(item.duration))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-/// Formats a time interval as m:ss.
-fileprivate func formatTime(_ interval: TimeInterval) -> String {
-    let total = Int(interval)
-    return String(format: "%d:%02d", total / 60, total % 60)
 }

@@ -1,7 +1,6 @@
 import SwiftUI
 import Foundation
 
-/// About screen: app name, version, description, licenses & attribution.
 struct AboutView: View {
     var body: some View {
         List {
