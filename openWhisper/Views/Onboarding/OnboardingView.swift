@@ -4,25 +4,33 @@ struct OnboardingView: View {
     var onFinish: () -> Void
     var onSkip: (() -> Void)? = nil
 
-    @State private var step = 0
+    private enum Step: Int, CaseIterable {
+        case intro, model, privacy
+
+        @ViewBuilder
+        var content: some View {
+            switch self {
+            case .intro: OnboardingIntroView()
+            case .model: OnboardingModelView()
+            case .privacy: OnboardingPrivacyView()
+            }
+        }
+    }
+
+    @State private var step = Step.intro
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 TabView(selection: $step) {
-                    ScrollView {
-                        OnboardingIntroView()
+                    ForEach(Step.allCases, id: \.self) { page in
+                        ScrollView {
+                            page.content
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .scrollIndicators(.hidden)
+                        .tag(page)
                     }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .scrollIndicators(.hidden)
-                    .tag(0)
-
-                    ScrollView {
-                        OnboardingModelView()
-                    }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .scrollIndicators(.hidden)
-                    .tag(1)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .automatic))
 
@@ -41,17 +49,25 @@ struct OnboardingView: View {
 
     private var primaryButton: some View {
         Button {
-            if step == 0 {
-                withAnimation { step = 1 }
+            if let next = nextStep {
+                withAnimation { step = next }
             } else {
                 onFinish()
             }
         } label: {
-            Text(step == 0 ? "Continue" : "Finish")
+            Text(nextStep == nil ? "Finish" : "Continue")
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
+    }
+
+    private var nextStep: Step? {
+        guard let index = Step.allCases.firstIndex(of: step),
+              index < Step.allCases.count - 1 else {
+            return nil
+        }
+        return Step.allCases[index + 1]
     }
 
     private func skip() {
