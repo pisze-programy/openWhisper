@@ -17,3 +17,9 @@ xcuserdata/
 *.pem
 *.mobileprovision
 .env
+
+# Accidental empty files
+/0,
+/3
+/3,
+Package.resolved
