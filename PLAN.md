@@ -131,6 +131,7 @@ Mandatory, skippable introduction. **Three steps**, native horizontal paging (`T
 - **Step 3 — Privacy:** one-line promise — transcriptions are never used to train models and everything stays on the device; **screenshot placeholder** (real screenshot added later).
 - **Controls:** Skip (always available) / Continue / Finish. Skipping always leads to the main app; the download keeps running.
 - **Interruptions:** if the app is killed mid-download, the download resumes on next launch; on failure show a message and re-show onboarding (or guide to Settings).
+- **Model states (persisted):** `notDownloaded` → `downloading(progress)` → `ready` | `failed`. Transcription is blocked until `ready`.
 
 ### §4d. Post-processing pipeline (planned — modeled on TypeWhisper `PostProcessingPipeline`)
 
@@ -138,16 +139,56 @@ Priority-ordered text steps applied to every new transcription, in order. Earlie
 
 | Prio | Step | Status | Notes |
 |---|---|---|---|
-| 100 | **Number normalization** (PL + EN) | TODO | "dwa tysiące trzysta" / "two hundred" → digits. Needs per-language number-word parsers (à la TypeWhisper `NumberNormalization/*`). |
-| 200 | **Speech punctuation** | TODO | Re-punctuation strategy per engine/language (TypeWhisper `SpeechPunctuationService`). Low priority — Parakeet already punctuates. |
-| 300 | **LLM correction** | Phase 2 | On-device/cloud LLM rewrites the transcript for fluency + mixed-language fixes. TypeWhisper runs it mid-pipeline (priority 300) with provider fallback order. |
+| 100 | **Number normalization** (PL + EN) | ✅ Done | "dwa tysiące trzysta" / "two hundred" → digits (`NumberNormalizer`, whole-word, diacritics-safe). |
+| 200 | **Speech punctuation** | ✅ Done | Light `SpeechPunctuation`: sentence-capitalize, single space after `.`/`!`/`?`, no space before punctuation. |
+| 300 | **LLM correction** | Phase 2 (spec below) | On-device/cloud LLM rewrites the transcript for fluency + mixed-language fixes, with provider fallback order. |
 | 500 | **Snippets** | ❌ Rejected | Text shortcuts — out of scope. |
 | 600 | **Corrections dictionary** | ✅ D13 | "heard as → should be", user-editable, whole-word case-insensitive (optionally exact-case). |
 | — | **Audio level normalization** | ✅ D12 | `AudioNormalizer` boost before decode (TypeWhisper `MicrophoneBoostProcessor`). |
 | — | **CTC vocabulary boosting** | Phase 2 | Context biasing of the decoder with user/prompt terms (TypeWhisper `CtcKeywordSpotter` + `VocabularyRescorer`). |
 
 **Prompt / context boosting (planned, Phase 2):** a user-provided *prompt* (e.g. the topic or expected terms) is parsed into boosting terms and fed to the decoder context-bias step — exactly TypeWhisper's `configureBoostingIfNeeded(prompt:dictionaryTermHints:)` (terms from the prompt when no explicit dictionary hints are set). The prompt also feeds the LLM correction step (step 300) as context.
-- **Model states (persisted):** `notDownloaded` → `downloading(progress)` → `ready` | `failed`. Transcription is blocked until `ready`.
+
+#### LLM correction (priority 300, Phase 2) — detail
+
+**When it runs:** mid-pipeline — after number normalization and speech punctuation, before the corrections dictionary — so it fixes a transcript that is already lexically clean.
+
+**Inputs:** the raw transcript text + optional user prompt/context (see below).
+
+**Providers (ordered fallback, à la TypeWhisper):** the user picks an order from a global list; a failed/rate-limited/empty attempt falls through to the next provider:
+1. On-device (default): Apple Intelligence (macOS 26+) or a local MLX model (Gemma-class) — private, offline, slower.
+2. Cloud: OpenAI-compatible / Groq / etc. — only when the user explicitly enables cloud.
+
+**Prompt template (draft):**
+```
+Correct the transcript for spelling, punctuation and mixed-language
+code-switching. Preserve the speaker's words and meaning; fix obvious
+transcription errors; do not add or remove information. Keep the same length.
+Context: <user prompt/context>
+Transcript: <text>
+```
+
+**Behavior:**
+- On failure or empty output → fall back to the raw transcript (never block or lose the transcription).
+- Preserve the corrections dictionary and number-normalized values (runs after them).
+- On-device by default; cloud only behind an explicit opt-in (privacy promise in onboarding).
+
+**UI:** Settings toggle **"Smart corrections"** (on/off) + provider order; the history row can show a subtle "corrected" badge.
+
+#### Prompt / context boosting (Phase 2) — detail
+
+**Source of the prompt:** optional user-provided context — a text field in Settings ("Context / expected terms") or per-recording — e.g. a topic, names, product terms.
+
+**Two uses:**
+1. **Decoder boosting:** the prompt is parsed into significant terms (tokenize → strip stopwords → keep 2+ char words) and passed to the CTC vocabulary-boosting step (context bias). If the CTC model isn't available, boosting silently skips.
+2. **LLM context:** the same prompt is appended to the LLM correction template above.
+
+**Term hygiene (à la TypeWhisper):**
+- Whole-word, case-insensitive boosting; limit term count and length (over-boosting degrades WER).
+- Explicit dictionary terms (D13) always take precedence over prompt-derived terms.
+- `ctcMinSimilarity` threshold can be tuned per term (TypeWhisper does this) to allow near-miss matches.
+
+**Degradation:** a bad prompt can hurt accuracy — so prompt-derived terms are capped (e.g. ≤ 20 terms) and only enabled when the user provides context.
 
 ---
 
