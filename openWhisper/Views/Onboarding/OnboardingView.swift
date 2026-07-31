@@ -47,7 +47,6 @@ struct OnboardingView: View {
             }
         }
         .onAppear {
-            // White page dots are invisible on the light background.
             let appearance = UIPageControl.appearance()
             appearance.currentPageIndicatorTintColor = UIColor.tintColor
             appearance.pageIndicatorTintColor = UIColor.systemGray3

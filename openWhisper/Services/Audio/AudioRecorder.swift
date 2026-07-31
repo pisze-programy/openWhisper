@@ -17,8 +17,6 @@ final class AudioRecorder {
     private var startDate: Date?
     private var interruptionObserverRegistered = false
 
-    // Previous audio session state, so recording can stop whatever is playing
-    // (music, podcasts) and hand control back when it's done.
     private var previousSessionCategory: AVAudioSession.Category?
     private var previousSessionMode: AVAudioSession.Mode?
     private var previousSessionOptions: AVAudioSession.CategoryOptions?
@@ -124,9 +122,6 @@ final class AudioRecorder {
         restoreAudioSession()
     }
 
-    /// Hand the audio session back to whatever was playing before recording:
-    /// deactivate with `notifyOthersOnDeactivation` (other apps resume their
-    /// audio) and restore the previous category / mode / options.
     private func restoreAudioSession() {
         let session = AVAudioSession.sharedInstance()
         try? session.setActive(false, options: [.notifyOthersOnDeactivation])

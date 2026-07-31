@@ -18,14 +18,6 @@ final class TranscriptionService {
         self.engine = TranscriptionEngine()
     }
 
-    /// True when the model is downloaded but not yet loaded into memory.
-    var needsWarmUp: Bool {
-        modelDownload.isReady && !isModelReady && !isWarmingUp && !isTranscribing
-    }
-
-    /// Pre-load the model into memory so the first recording transcribes
-    /// instantly. No-op when the model isn't downloaded yet or already warm.
-    /// Runs on a background thread; the UI never blocks.
     func warmUp() async {
         guard modelDownload.isReady, !isWarmingUp, !isTranscribing, !isModelReady else { return }
         isWarmingUp = true
@@ -39,19 +31,11 @@ final class TranscriptionService {
         case .success:
             isModelReady = true
             await warmGPUShaders(units: units)
-        case .failure(let error):
+        case .failure:
             isModelReady = false
-            TranscriptionMetrics.report(
-                "warmUp.failed",
-                since: .capture(),
-                extra: "units=\(units.rawValue) | \(error.localizedDescription)"
-            )
         }
     }
 
-    /// Runs one throwaway transcription of silence so Core ML compiles the
-    /// Metal shaders on GPU targets. Without this the first real recording
-    /// pays the ~200 ms shader-compile on top of the encoder. No-op on CPU.
     private func warmGPUShaders(units: ParakeetComputeUnits) async {
         switch units {
         case .gpu, .all: break
@@ -63,8 +47,6 @@ final class TranscriptionService {
         }.value
     }
 
-    /// Free the in-memory model when the app backgrounds so the device isn't
-    /// left holding ~0.5 GB. The model is reloaded on the next foreground.
     func enterBackground() {
         guard !isWarmingUp, !isTranscribing else { return }
         engine.release()

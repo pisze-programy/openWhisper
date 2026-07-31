@@ -6,9 +6,6 @@ import OpenWhisperShared
 final class ModelDownloadManager {
     static let shared = ModelDownloadManager()
 
-    /// Minimum free space the model needs on disk after download + compile
-    /// (`.mlpackage` sources are deleted, so ~480 MB download + compiled
-    /// `.mlmodelc`).
     static let minRequiredFreeSpaceGB: Double = 1.3
 
     private(set) var status: ModelStatus = .notDownloaded
