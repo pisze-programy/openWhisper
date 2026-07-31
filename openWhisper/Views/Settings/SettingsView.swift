@@ -11,6 +11,14 @@ struct SettingsView: View {
             SettingsModelSection()
 
             Section {
+                KeyboardSetupCard()
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } header: {
+                SectionHeader(title: "Keyboard")
+            }
+
+            Section {
                 ToggleRow(title: "Auto-copy to clipboard", isOn: $settings.autoCopy)
 
                 HStack {
