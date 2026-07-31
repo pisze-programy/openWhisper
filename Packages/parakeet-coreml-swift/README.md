@@ -5,6 +5,11 @@
 [![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat)](https://swift.org/package-manager/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-lightgray.svg?style=flat)](LICENSE)
 
+> **Vendored copy — OpenWhisper fork.** This directory is the `mweinbach/parakeet-coreml-swift`
+> package vendored into the OpenWhisper app. Local modifications beyond the
+> upstream 0.1.1 are tracked in **[Changes.md](Changes.md)** (iPhone-tuned
+> performance & robustness fixes).
+
 On-device speech-to-text on Apple silicon. Swift wrapper around NVIDIA's
 **Parakeet TDT 0.6B v3** compiled to Core ML, tuned so it's **3× faster
 than running the same `.mlpackage` from Python** on the GPU.

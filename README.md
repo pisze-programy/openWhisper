@@ -12,7 +12,7 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 - Auto-copy to clipboard after each transcription
 - Up to 10-minute recordings; processing is serialized (no concurrent transcriptions)
 - 3-step onboarding: intro, one-time model download, privacy promise
-- One-time ~450 MB model download, then fully offline; subsequent starts take ~0.2 s
+- One-time ~480 MB model download (needs ~1.3 GB free space), then fully offline; subsequent starts take ~0.2 s
 - 100% local history — transcriptions stay on your device, never used for training
 
 ## Examples
@@ -37,7 +37,7 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 
 1. Open `openWhisper.xcodeproj` in Xcode.
 2. The vendored package is already referenced — no action needed.
-3. Run on a physical iPhone (iOS 18+). The model downloads on first launch (~450 MB).
+3. Run on a physical iPhone (iOS 18+). The model downloads on first launch (~480 MB, ~1.3 GB free space recommended).
 
 ## Up next
 

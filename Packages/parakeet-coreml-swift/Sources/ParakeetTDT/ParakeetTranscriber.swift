@@ -1,5 +1,11 @@
 import CoreML
 import Foundation
+import os
+
+private let perfLog = Logger(
+    subsystem: "com.parakeet-tdt",
+    category: "performance"
+)
 
 /// End-to-end Parakeet TDT transcriber.
 ///
@@ -71,33 +77,44 @@ public final class ParakeetTranscriber {
         self.chunkMelFrames = chunkMelFrames
         self.sampleRate = sampleRate
 
+        var phase = Date()
+        func elapsed(_ label: String) {
+            let ms = Date().timeIntervalSince(phase) * 1000
+            perfLog.info("load.\(label, privacy: .public): \(String(format: "%.0f", ms)) ms")
+            phase = Date()
+        }
+
         let cache = ModelCache(
             cacheDirectory: cacheDirectory,
             deleteSourceAfterCompile: deleteSourceAfterCompile
         )
         self.cacheURL = cache.cacheDirectory
 
-        let encoderURL = try ParakeetTranscriber.resolveModel(
-            under: modelsRoot, named: "encoder"
-        )
-        let decoderURL = try ParakeetTranscriber.resolveModel(
-            under: modelsRoot, named: "decoder"
-        )
-        let jointURL = try ParakeetTranscriber.resolveModel(
-            under: modelsRoot, named: "joint"
-        )
         let tokenizerURL = modelsRoot.appendingPathComponent("tokenizer.json")
 
-        let encCompiled = try cache.compiledURL(for: encoderURL)
-        let decCompiled = try cache.compiledURL(for: decoderURL)
-        let joiCompiled = try cache.compiledURL(for: jointURL)
+        // Prefer the source `.mlpackage` (compile-or-use-cache). If the
+        // sources were deleted after compiling (`deleteSourceAfterCompile`),
+        // fall back to the compiled bundle already in the cache.
+        let encCompiled = try Self.resolveOrCached(
+            modelsRoot: modelsRoot, cache: cache, named: "encoder"
+        )
+        let decCompiled = try Self.resolveOrCached(
+            modelsRoot: modelsRoot, cache: cache, named: "decoder"
+        )
+        let joiCompiled = try Self.resolveOrCached(
+            modelsRoot: modelsRoot, cache: cache, named: "joint"
+        )
+        elapsed("resolve+compile")
 
         let config = MLModelConfiguration()
         config.computeUnits = computeUnits.mlComputeUnits
 
         let encoder = try MLModel(contentsOf: encCompiled, configuration: config)
+        elapsed("encoder.mlmodel")
         let decoder = try MLModel(contentsOf: decCompiled, configuration: config)
+        elapsed("decoder.mlmodel")
         let joint = try MLModel(contentsOf: joiCompiled, configuration: config)
+        elapsed("joint.mlmodel")
 
         // Decoder stateful sizes are encoded in the spec's hidden / cell
         // input shapes: [num_layers, 1, hidden].
@@ -135,7 +152,9 @@ public final class ParakeetTranscriber {
             maxSymbolsPerStep: 10,
             numDecoderWorkers: workerCount
         )
+        elapsed("runner")
         self.tokenizer = try Tokenizer(tokenizerJSONURL: tokenizerURL)
+        elapsed("tokenizer")
         self.featureExtractor = try MelFeatureExtractor(
             sampleRate: sampleRate,
             hopLength: 160,
@@ -144,6 +163,7 @@ public final class ParakeetTranscriber {
             numMelFilters: 128,
             preemphasis: 0.97
         )
+        elapsed("featureExtractor")
     }
 
     // MARK: - High-level transcription
@@ -153,7 +173,13 @@ public final class ParakeetTranscriber {
     /// windows (30 s with the default 3000 mel frames). Token streams from
     /// every chunk are concatenated, then detokenized in one pass.
     public func transcribe(audioURL: URL) throws -> Transcription {
+        let t0 = Date()
         let audio = try AudioLoader.loadMono16k(at: audioURL)
+        let parseMS = Date().timeIntervalSince(t0) * 1000
+        let audioSeconds = Double(audio.count) / Double(self.sampleRate)
+        perfLog.info(
+            "parse.audioURL: \(String(format: "%.0f", parseMS)) ms | samples \(audio.count) | \(String(format: "%.2f", audioSeconds)) s audio"
+        )
         return try transcribe(samples: audio)
     }
 
@@ -170,15 +196,24 @@ public final class ParakeetTranscriber {
     /// throwing method.
     public func transcribe(samples: [Float]) throws -> Transcription {
         let audioDuration = Double(samples.count) / Double(sampleRate)
+
+        // Parakeet's encoder needs a minimum audio context; below ~5 s it can
+        // return empty text or hallucinate a tail (upstream issue #1). Pad
+        // with trailing silence so the shortest dictations still transcribe.
+        // The reported audio duration stays the real one.
+        let padded = Self.padToMinDuration(
+            samples, minSeconds: Self.minAudioSeconds, sampleRate: sampleRate
+        )
+
         let chunkSamples = chunkMelFrames * featureExtractor.hopLength
 
         // --- Slice audio into fixed-length chunks up front ---
         var chunks: [[Float]] = []
         do {
             var cursor = 0
-            while cursor < samples.count {
-                let end = min(cursor + chunkSamples, samples.count)
-                var chunk = Array(samples[cursor..<end])
+            while cursor < padded.count {
+                let end = min(cursor + chunkSamples, padded.count)
+                var chunk = Array(padded[cursor..<end])
                 if chunk.count < chunkSamples {
                     chunk.append(
                         contentsOf: [Float](repeating: 0, count: chunkSamples - chunk.count)
@@ -218,6 +253,52 @@ public final class ParakeetTranscriber {
     }
 
     // MARK: - Helpers
+
+    /// Minimum audio context the encoder needs to produce text instead of an
+    /// empty result or a hallucinated tail on short clips.
+    private static let minAudioSeconds = 5.0
+    /// Short silent lead-in before the speech so the encoder is warm before
+    /// the first syllable (fixes the first words being cut off).
+    private static let leadInSeconds = 0.5
+
+    /// Pads a short clip with silence so it reaches at least `minSeconds`:
+    /// a short lead-in on the left (encoder warm-up) and silence on the right
+    /// (avoids a hallucinated tail). Longer audio passes through untouched.
+    private static func padToMinDuration(
+        _ samples: [Float],
+        minSeconds: Double,
+        sampleRate: Int
+    ) -> [Float] {
+        let minSamples = Int(minSeconds * Double(sampleRate))
+        guard samples.count < minSamples else { return samples }
+
+        let leadCount = Int(leadInSeconds * Double(sampleRate))
+        let lead = [Float](repeating: 0, count: leadCount)
+        var padded = lead + samples
+        if padded.count < minSamples {
+            padded += [Float](repeating: 0, count: minSamples - padded.count)
+        }
+        return padded
+    }
+
+    /// Resolve the compiled `.mlmodelc` for `named`, compiling the source
+    /// `.mlpackage` when present. When `deleteSourceAfterCompile` removed the
+    /// sources, reuse the compiled bundle that's already in the cache.
+    private static func resolveOrCached(
+        modelsRoot: URL,
+        cache: ModelCache,
+        named: String
+    ) throws -> URL {
+        if let source = try? resolveModel(under: modelsRoot, named: named) {
+            return try cache.compiledURL(for: source)
+        }
+        if let cached = cache.compiledModelURL(named: named) {
+            return cached
+        }
+        throw ParakeetError.modelNotFound(
+            url: modelsRoot.appendingPathComponent("\(named).mlpackage")
+        )
+    }
 
     /// Look for ``<name>.mlmodelc`` (preferred; already compiled) then
     /// ``<name>.mlpackage`` inside ``modelsRoot``.

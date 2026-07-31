@@ -42,18 +42,41 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        container = try? ModelContainer(
-            for: TranscriptionItem.self,
-            configurations: ModelConfiguration(url: ModelLocations.historyStoreURL)
-        )
+        print("[Keyboard] viewDidLoad start")
         setupLayout()
-        loadHistory()
+        print("[Keyboard] viewDidLoad end")
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        print("[Keyboard] viewDidAppear start, store: \(ModelLocations.historyStoreURL.path)")
+
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) != nil else {
+            print("[Keyboard] APP GROUP UNAVAILABLE — missing entitlement/provisioning")
+            showMessage("App Group unavailable — enable App Groups in Xcode (Signing & Capabilities) and rebuild")
+            return
+        }
+
+        do {
+            container = try ModelContainer(
+                for: TranscriptionItem.self,
+                configurations: ModelConfiguration(url: ModelLocations.historyStoreURL)
+            )
+            print("[Keyboard] ModelContainer OK")
+        } catch {
+            print("[Keyboard] ModelContainer FAILED: \(error)")
+            showMessage("Store error: \(error.localizedDescription)")
+            return
+        }
         UserDefaults(suiteName: AppGroup.identifier)?.set(Date(), forKey: AppGroup.keyboardLastUsedKey)
         loadHistory()
+        print("[Keyboard] viewDidAppear end")
+    }
+
+    private func showMessage(_ message: String) {
+        items = []
+        emptyLabel.text = message
+        updateVisibility()
     }
 
     private func setupLayout() {
@@ -92,7 +115,9 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
             var descriptor = FetchDescriptor<TranscriptionItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
             descriptor.fetchLimit = 50
             items = try container.mainContext.fetch(descriptor)
+            print("[Keyboard] fetch OK, items=\(items.count)")
         } catch {
+            print("[Keyboard] fetch FAILED: \(error)")
             items = []
         }
         updateVisibility()

@@ -7,7 +7,15 @@ let package = Package(
     products: [
         .library(name: "OpenWhisperShared", targets: ["OpenWhisperShared"])
     ],
+    dependencies: [
+        .package(path: "../Packages/parakeet-coreml-swift")
+    ],
     targets: [
-        .target(name: "OpenWhisperShared")
+        .target(
+            name: "OpenWhisperShared",
+            dependencies: [
+                .product(name: "ParakeetTDT", package: "parakeet-coreml-swift")
+            ]
+        )
     ]
 )

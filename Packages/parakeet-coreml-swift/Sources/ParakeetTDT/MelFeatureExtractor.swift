@@ -30,7 +30,10 @@ public final class MelFeatureExtractor {
     public let epsilon: Float
 
     private let hannWindow: [Float]
-    private let melRows: [[Float]]
+    /// Mel filter bank flattened to `[numMelFilters][numFreqBins]` row-major,
+    /// so the per-frame mel projection is a single `vDSP_mmul` instead of
+    /// `numMelFilters` individual dot products.
+    private let melBankFlat: [Float]
     private let numFreqBins: Int
 
     // vDSP FFT setup for `n_fft` (real-to-real packed).
@@ -69,7 +72,7 @@ public final class MelFeatureExtractor {
             nFFT: nFFT,
             numMelFilters: numMelFilters
         )
-        self.melRows = rows
+        self.melBankFlat = rows.flatMap { $0 }
         self.numFreqBins = bins
 
         guard let setup = vDSP_DFT_zrop_CreateSetup(
@@ -132,10 +135,10 @@ public final class MelFeatureExtractor {
         var realOut = [Float](repeating: 0, count: nFFT / 2)
         var imagOut = [Float](repeating: 0, count: nFFT / 2)
         var power = [Float](repeating: 0, count: numFreqBins)
-        var logMelFrames = [[Float]](
-            repeating: [Float](repeating: 0, count: numMelFilters),
-            count: numFrames
-        )
+        var real = [Float](repeating: 0, count: numFreqBins)
+        var imag = [Float](repeating: 0, count: numFreqBins)
+        var melRow = [Float](repeating: 0, count: numMelFilters)
+        var melFlat = [Float](repeating: 0, count: numFrames * numMelFilters)
 
         let padOffset = (nFFT - winLength) / 2
 
@@ -183,66 +186,79 @@ public final class MelFeatureExtractor {
             // Unpack into the usual n/2 + 1 real spectrum. vDSP packs DC in
             // realOut[0] and Nyquist in imagOut[0]; we reconstruct the full
             // one-sided spectrum to match torch.stft.
-            var real = [Float](repeating: 0, count: numFreqBins)
-            var imag = [Float](repeating: 0, count: numFreqBins)
             real[0] = realOut[0] * 0.5       // vDSP scales DC / Nyquist by 2;
             real[numFreqBins - 1] = imagOut[0] * 0.5  // undo.
+            imag[0] = 0
+            imag[numFreqBins - 1] = 0
             for k in 1..<(nFFT / 2) {
                 real[k] = realOut[k] * 0.5
                 imag[k] = imagOut[k] * 0.5
             }
 
             // Power spectrum: p[k] = real^2 + imag^2
+            // Match HF ordering: sqrt(re^2 + im^2) then squared.
             for k in 0..<numFreqBins {
                 let re = real[k]
                 let im = imag[k]
-                // Match HF ordering: sqrt(re^2 + im^2) then squared.
                 let mag = sqrtf(re * re + im * im)
                 power[k] = mag * mag
             }
 
-            // Mel projection: mel[i] = sum_k mel_rows[i][k] * power[k]
-            var melRow = [Float](repeating: 0, count: numMelFilters)
+            // Mel projection in one matmul: melRow[128] = bank[128×257] · power[257].
+            vDSP_mmul(
+                melBankFlat, 1,
+                power, 1,
+                &melRow, 1,
+                vDSP_Length(numMelFilters), 1, vDSP_Length(numFreqBins)
+            )
+
+            // Log-compressed, written straight into the flat output buffer.
+            let melBase = t * numMelFilters
             for i in 0..<numMelFilters {
-                var acc: Float = 0
-                melRows[i].withUnsafeBufferPointer { mPtr in
-                    power.withUnsafeBufferPointer { pPtr in
-                        vDSP_dotpr(mPtr.baseAddress!, 1, pPtr.baseAddress!, 1, &acc, vDSP_Length(numFreqBins))
-                    }
-                }
-                melRow[i] = log(acc + logGuard)
+                melFlat[melBase + i] = log(melRow[i] + logGuard)
             }
-            logMelFrames[t] = melRow
         }
 
-        // Per-mel-bin normalization over time.
+        // Per-mel-bin normalization over time (HF: mean and Bessel-corrected
+        // std over the time axis), done in place on the flat buffer.
         var mean = [Float](repeating: 0, count: numMelFilters)
         var std = [Float](repeating: 0, count: numMelFilters)
         let nT = Float(numFrames)
         for t in 0..<numFrames {
+            let base = t * numMelFilters
             for i in 0..<numMelFilters {
-                mean[i] += logMelFrames[t][i]
+                mean[i] += melFlat[base + i]
             }
         }
         for i in 0..<numMelFilters { mean[i] /= nT }
         // HF uses ``(len - 1)`` denominator for variance (Bessel's correction).
         let denom = max(nT - 1, 1)
         for t in 0..<numFrames {
+            let base = t * numMelFilters
             for i in 0..<numMelFilters {
-                let d = logMelFrames[t][i] - mean[i]
+                let d = melFlat[base + i] - mean[i]
                 std[i] += d * d
             }
         }
         for i in 0..<numMelFilters { std[i] = sqrt(std[i] / denom) }
 
-        var normalized = logMelFrames
+        var mel = [[Float]](
+            repeating: [Float](repeating: 0, count: numMelFilters),
+            count: numFrames
+        )
         for t in 0..<numFrames {
-            for i in 0..<numMelFilters {
-                normalized[t][i] = (normalized[t][i] - mean[i]) / (std[i] + epsilon)
+            let base = t * numMelFilters
+            melFlat.withUnsafeBufferPointer { src in
+                let srcBase = src.baseAddress!.advanced(by: base)
+                mel[t].withUnsafeMutableBufferPointer { dst in
+                    for i in 0..<numMelFilters {
+                        dst[i] = (srcBase[i] - mean[i]) / (std[i] + epsilon)
+                    }
+                }
             }
         }
 
         let mask = [Int32](repeating: 1, count: numFrames)
-        return Features(mel: normalized, attentionMask: mask)
+        return Features(mel: mel, attentionMask: mask)
     }
 }

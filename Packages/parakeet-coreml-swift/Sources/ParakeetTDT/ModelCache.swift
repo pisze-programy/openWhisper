@@ -94,6 +94,33 @@ public struct ModelCache {
         return target
     }
 
+    /// Find a previously-compiled bundle by name, independent of its source.
+    /// Used when `deleteSourceAfterCompile` removed the `.mlpackage` sources
+    /// and the content-address can no longer be recomputed. Returns the most
+    /// recently compiled match (the current model version).
+    public func compiledModelURL(named name: String) -> URL? {
+        let expected = name.hasSuffix(".mlmodelc") ? name : "\(name).mlmodelc"
+        let fm = FileManager.default
+        let subdirs = (try? fm.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey, .isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        var best: URL?
+        var bestDate: Date?
+        for dir in subdirs {
+            guard (try? dir.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
+            let candidate = dir.appendingPathComponent(expected)
+            guard fm.fileExists(atPath: candidate.path) else { continue }
+            let date = (try? candidate.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+            if best == nil || (date ?? .distantPast) > (bestDate ?? .distantPast) {
+                best = candidate
+                bestDate = date
+            }
+        }
+        return best
+    }
+
     /// Content-addressed cache key. Uses file size + mtime for directories
     /// (full SHA256 over every file would be correct but slow for a 650 MB
     /// `.mlpackage`; size + mtime is sufficient to catch intentional edits

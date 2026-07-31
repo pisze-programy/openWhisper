@@ -17,6 +17,12 @@ final class AudioRecorder {
     private var startDate: Date?
     private var interruptionObserverRegistered = false
 
+    // Previous audio session state, so recording can stop whatever is playing
+    // (music, podcasts) and hand control back when it's done.
+    private var previousSessionCategory: AVAudioSession.Category?
+    private var previousSessionMode: AVAudioSession.Mode?
+    private var previousSessionOptions: AVAudioSession.CategoryOptions?
+
     func start() async throws {
         guard !isRecording else { throw RecorderError.alreadyRecording }
         if let previous = fileURL {
@@ -32,6 +38,9 @@ final class AudioRecorder {
         }
 
         let session = AVAudioSession.sharedInstance()
+        previousSessionCategory = session.category
+        previousSessionMode = session.mode
+        previousSessionOptions = session.categoryOptions
         try session.setCategory(.record, mode: .measurement, options: [])
         try session.setActive(true)
 
@@ -59,7 +68,7 @@ final class AudioRecorder {
             stopTasks()
             pipeline.stop()
             isRecording = false
-            try? AVAudioSession.sharedInstance().setActive(false, options: [])
+            restoreAudioSession()
         }
         guard let fileURL else {
             throw RecorderError.noRecording
@@ -91,7 +100,7 @@ final class AudioRecorder {
         pipeline.stop()
         onAutoStop?()
         isRecording = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: [])
+        restoreAudioSession()
     }
 
     deinit {
@@ -112,7 +121,18 @@ final class AudioRecorder {
         pipeline.stop()
         onAutoStop?()
         isRecording = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: [])
+        restoreAudioSession()
+    }
+
+    /// Hand the audio session back to whatever was playing before recording:
+    /// deactivate with `notifyOthersOnDeactivation` (other apps resume their
+    /// audio) and restore the previous category / mode / options.
+    private func restoreAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+        if let previousSessionCategory, let previousSessionMode, let previousSessionOptions {
+            try? session.setCategory(previousSessionCategory, mode: previousSessionMode, options: previousSessionOptions)
+        }
     }
 
     private func startElapsedUpdater() {

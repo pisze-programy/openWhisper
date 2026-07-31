@@ -6,7 +6,7 @@ struct OnboardingModelView: View {
             Text("Download the speech model")
                 .font(.title2.bold())
 
-            Text("OpenWhisper runs entirely on your device. The speech model is downloaded once (~450 MB) — your audio never leaves your phone.")
+            Text("OpenWhisper runs entirely on your device. The speech model is downloaded once (~480 MB, needs ~1.3 GB of free space) — your audio never leaves your phone.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

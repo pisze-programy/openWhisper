@@ -6,19 +6,30 @@ struct ModelCardView: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 10) {
+                StatusBadge(status: modelDownload.status)
+                    .fixedSize()
+
+                HStack(spacing: 10) {
                     Image(systemName: "waveform.badge.mic")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Parakeet TDT 0.6B v3")
                             .font(.headline)
-                        Text("On-device speech-to-text · ~450 MB · 25 European languages")
+                        Text("On-device speech-to-text · ~480 MB download · 25 European languages")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
-                    StatusBadge(status: modelDownload.status)
+                }
+
+                if modelDownload.status == .notDownloaded {
+                    if let available = modelDownload.availableFreeSpaceGB {
+                        Text(modelDownload.isLowOnSpace
+                             ? String(format: "Low storage — only %.1f GB free. The model needs ~%.1f GB; the download may fail.", available, ModelDownloadManager.minRequiredFreeSpaceGB)
+                             : String(format: "Free space: %.1f GB — model needs ~%.1f GB.", available, ModelDownloadManager.minRequiredFreeSpaceGB))
+                            .font(.caption)
+                            .foregroundStyle(modelDownload.isLowOnSpace ? .orange : .secondary)
+                    }
                 }
 
                 switch modelDownload.status {
@@ -80,7 +91,7 @@ struct ModelCardView: View {
     }
 
     private func progressText(for progress: Double) -> String {
-        let doneMB = Int((progress * 450).rounded())
-        return "\(doneMB) MB of ~450 MB"
+        let doneMB = Int((progress * 480).rounded())
+        return "\(doneMB) MB of ~480 MB"
     }
 }

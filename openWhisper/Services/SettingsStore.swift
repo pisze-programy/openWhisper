@@ -27,18 +27,25 @@ final class SettingsStore {
         }
     }
 
+    var onboardingCompleted: Bool {
+        didSet {
+            UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
+        }
+    }
+
     static let maxRecordingDuration: TimeInterval = 600
 
     init() {
         let defaults = UserDefaults.standard
         if let raw = defaults.string(forKey: "settings.computeUnits"),
            let units = ParakeetComputeUnits(rawValue: raw) {
-            computeUnits = units
+            computeUnits = units == .ane ? .gpu : units
         } else {
-            computeUnits = .ane
+            computeUnits = .gpu
         }
         autoCopy = defaults.object(forKey: "settings.autoCopy") as? Bool ?? true
         saveToHistory = defaults.object(forKey: "settings.saveToHistory") as? Bool ?? true
         languageCode = defaults.string(forKey: "settings.languageCode")
+        onboardingCompleted = defaults.object(forKey: "settings.onboardingCompleted") as? Bool ?? false
     }
 }

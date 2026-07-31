@@ -7,11 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		78732D0D301C6D030019D594 /* ParakeetTDT in Frameworks */ = {isa = PBXBuildFile; productRef = B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */; };
-/* End PBXBuildFile section */
-
-/* Begin PBXBuildFile section */
 		091A2B3C4D5E6F708192A3B4 /* OpenWhisperKeyboard.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		783C6F95301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
+		783C6F96301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
+		78732D0D301C6D030019D594 /* ParakeetTDT in Frameworks */ = {isa = PBXBuildFile; productRef = B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				783C6F96301CF4E300004B40 /* OpenWhisperShared in Frameworks */,
 				78732D0D301C6D030019D594 /* ParakeetTDT in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -82,6 +82,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				783C6F95301CF4E300004B40 /* OpenWhisperShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,7 +184,7 @@
 			mainGroup = 78732CE8301C64E90019D594;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */,
+				A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */,
 				C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -240,6 +241,33 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0A1B2C3D4E5F60718293A4B5C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				INFOPLIST_FILE = OpenWhisperKeyboard/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		78732CFA301C64EA0019D594 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -366,12 +394,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisper;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "OpenWhisper uses the microphone to transcribe your speech into text. Audio is processed on your device and never leaves it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -400,12 +429,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
 				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisper;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "OpenWhisper uses the microphone to transcribe your speech into text. Audio is processed on your device and never leaves it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -457,33 +487,6 @@
 			};
 			name = Debug;
 		};
-		0A1B2C3D4E5F60718293A4B5C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APPLICATION_EXTENSION_API_ONLY = YES;
-				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
-				INFOPLIST_FILE = OpenWhisperKeyboard/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.keyboard;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -517,9 +520,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */ = {
+		A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/parakeet-coreml-swift;
+			relativePath = "Packages/parakeet-coreml-swift";
 		};
 		C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */ = {
 			isa = XCLocalSwiftPackageReference;
@@ -530,7 +533,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */;
+			package = A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */;
 			productName = ParakeetTDT;
 		};
 		D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */ = {

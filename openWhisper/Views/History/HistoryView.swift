@@ -129,12 +129,21 @@ struct HistoryView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .disabled(!modelDownload.isReady || isHandlingRecording)
+                        .disabled(!modelDownload.isReady || isHandlingRecording || !transcription.isModelReady)
 
-                        Text(recorder.isRecording ? recorder.elapsed.clockString : "Tap to record")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
+                        if modelDownload.isReady && !transcription.isModelReady {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                Text("Warming the model…")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text(recorder.isRecording ? recorder.elapsed.clockString : "Tap to record")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity)

@@ -1,11 +1,15 @@
 import SwiftUI
 
 struct KeyboardSetupCard: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var status: KeyboardStatus = .notEnabled
 
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
+                statusBadge
+                    .fixedSize()
+
                 HStack(spacing: 10) {
                     Image(systemName: "keyboard")
                         .font(.title3)
@@ -17,8 +21,6 @@ struct KeyboardSetupCard: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
-                    statusBadge
                 }
 
                 switch status {
@@ -37,29 +39,46 @@ struct KeyboardSetupCard: View {
                             KeyboardDetector.openSettings()
                         } label: {
                             Label("Open iOS Settings", systemImage: "gear")
+                                .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
+                        Text("The status updates after you open the keyboard once.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
         }
         .onAppear { refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refresh() }
+        }
     }
 
     private var statusBadge: some View {
-        Group {
-            switch status {
-            case .enabled:
-                Label("Enabled", systemImage: "checkmark")
-            case .notEnabled:
-                Label("Not added", systemImage: "exclamationmark")
-            }
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+            Text(label)
         }
         .font(.caption.weight(.semibold))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(statusColor.opacity(0.15), in: Capsule())
         .foregroundStyle(statusColor)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(statusColor.opacity(0.12), in: Capsule())
+    }
+
+    private var icon: String {
+        switch status {
+        case .enabled: return "checkmark"
+        case .notEnabled: return "exclamationmark"
+        }
+    }
+
+    private var label: String {
+        switch status {
+        case .enabled: return "Enabled"
+        case .notEnabled: return "Not added"
+        }
     }
 
     private var statusColor: Color {

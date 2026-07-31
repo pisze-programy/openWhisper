@@ -1,16 +1,21 @@
 import Foundation
 
 public struct TranscriptionResult: Sendable {
-    let text: String
-    let audioDuration: TimeInterval
+    public let text: String
+    public let audioDuration: TimeInterval
+
+    public init(text: String, audioDuration: TimeInterval) {
+        self.text = text
+        self.audioDuration = audioDuration
+    }
 }
 
-enum TranscriptionError: LocalizedError {
+public enum TranscriptionError: LocalizedError {
     case busy
     case modelUnavailable
     case failed(String)
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .busy:
             return "A transcription is already in progress."

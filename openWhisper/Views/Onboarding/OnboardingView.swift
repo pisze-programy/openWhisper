@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct OnboardingView: View {
     var onFinish: () -> Void
@@ -44,6 +45,12 @@ struct OnboardingView: View {
                     Button("Skip") { skip() }
                 }
             }
+        }
+        .onAppear {
+            // White page dots are invisible on the light background.
+            let appearance = UIPageControl.appearance()
+            appearance.currentPageIndicatorTintColor = UIColor.tintColor
+            appearance.pageIndicatorTintColor = UIColor.systemGray3
         }
     }
 

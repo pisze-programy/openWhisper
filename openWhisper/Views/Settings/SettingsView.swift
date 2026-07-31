@@ -51,6 +51,14 @@ struct SettingsView: View {
             }
 
             Section {
+                Button("Show onboarding again") {
+                    settingsStore.onboardingCompleted = false
+                }
+            } header: {
+                SectionHeader(title: "Onboarding")
+            }
+
+            Section {
                 NavigationLink {
                     AboutView()
                 } label: {

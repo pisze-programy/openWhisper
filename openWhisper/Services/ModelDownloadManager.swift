@@ -6,13 +6,36 @@ import OpenWhisperShared
 final class ModelDownloadManager {
     static let shared = ModelDownloadManager()
 
+    /// Minimum free space the model needs on disk after download + compile
+    /// (`.mlpackage` sources are deleted, so ~480 MB download + compiled
+    /// `.mlmodelc`).
+    static let minRequiredFreeSpaceGB: Double = 1.3
+
     private(set) var status: ModelStatus = .notDownloaded
+    private(set) var availableFreeSpaceGB: Double?
 
     var isReady: Bool { status == .ready }
 
+    var isLowOnSpace: Bool {
+        guard let availableFreeSpaceGB else { return false }
+        return availableFreeSpaceGB < Self.minRequiredFreeSpaceGB
+    }
+
     func refreshStatus() {
+        refreshAvailableSpace()
         guard status == .notDownloaded || status == .ready else { return }
         status = ModelLocations.isDownloaded ? .ready : .notDownloaded
+    }
+
+    func refreshAvailableSpace() {
+        let url = ModelLocations.hfModelsDirectory
+        if let capacity = try? url.resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+        ).volumeAvailableCapacityForImportantUsage {
+            availableFreeSpaceGB = Double(capacity) / 1_073_741_824
+        } else {
+            availableFreeSpaceGB = nil
+        }
     }
 
     func startDownload(force: Bool = false) async {
