@@ -2,26 +2,25 @@
 
 On-device speech-to-text for iPhone. Free, open source, private.
 
-OpenWhisper turns your voice into text directly on your iPhone using the **Parakeet TDT 0.6B v3** model (Core ML) via the [`parakeet-coreml-swift`](https://github.com/mweinbach/parakeet-coreml-swift) package. Audio never leaves your device — recordings are processed and stored locally. No cloud, no account.
+OpenWhisper turns your voice into text directly on your iPhone using the Parakeet TDT 0.6B v3 model (Core ML) via the `parakeet-coreml-swift` package. Audio never leaves your device — recordings are processed and stored locally. No cloud, no account.
 
 ## Features
 
-- **Voice-to-text on-device** — ANE / GPU / CPU compute units, selectable
-- **25 European languages** (incl. Polish), auto-detected; punctuation + capitalization built in
-- **Transcription history** — copy, delete, or clear all
-- **Auto-copy to clipboard** — paste anywhere with one tap
-- **Up to 10-minute recordings** — auto-stopped; processing is serialized (no concurrent transcriptions)
-- **Keyboard extension** — insert past transcriptions into any text field without opening the app
-- **2-step onboarding** — quick intro with demo video (placeholder for now) and one-tap model download
-- **One-time model download** (~450 MB) on first launch, stored persistently — subsequent starts take ~0.2 s
-- **100% local history** — transcriptions stay on your device, never synced to any cloud
-- Works fully **offline** after the initial download
+- Voice-to-text on device, with selectable compute units (ANE / GPU / CPU)
+- 25 European languages, auto-detected; punctuation and capitalization built in
+- Transcription history: copy (tap), delete (swipe), clear all
+- Auto-copy to clipboard after each transcription
+- Up to 10-minute recordings; processing is serialized (no concurrent transcriptions)
+- 3-step onboarding: intro, one-time model download, privacy promise
+- One-time ~450 MB model download, then fully offline; subsequent starts take ~0.2 s
+- 100% local history — transcriptions stay on your device, never used for training
 
-## Why
+## Examples
 
-- **Private** — speech processing and history stay entirely on your iPhone
-- **Free & open source** — no subscriptions, no telemetry
-- **Fast** — optimized for the Apple Neural Engine
+- Dictate a message, then paste it straight into Messages or Mail (auto-copy is on by default).
+- Transcribe a short note or a meeting point without typing.
+- Come back later and copy any past transcription again — or delete it, or clear the whole history.
+- Record up to 10 minutes in one take; the app stops and transcribes automatically at the limit.
 
 ## Tech stack
 
@@ -30,37 +29,36 @@ OpenWhisper turns your voice into text directly on your iPhone using the **Parak
 | UI | SwiftUI |
 | Minimum OS | iOS 18+ |
 | Speech model | [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) → [Core ML](https://huggingface.co/mweinbach1/parakeet-tdt-0.6b-v3-coreml) (CC-BY-4.0) |
-| Swift package | [`parakeet-coreml-swift`](https://github.com/mweinbach/parakeet-coreml-swift) (Apache-2.0) |
-| Persistence | SwiftData, local-only (shared via App Group) |
-| Extensions | Custom Keyboard Extension |
-
-## Getting started
-
-1. Open `openWhisper.xcodeproj` in Xcode.
-2. The `parakeet-coreml-swift` package is **vendored** at `Packages/parakeet-coreml-swift` (Xcode rejects the upstream package because it uses `.unsafeFlags`; the only local change is removing that flag). It is already referenced in the project — no action needed.
-3. Run on a physical iPhone (model download is ~450 MB on first launch).
-4. Enable the keyboard (Phase 1.5): Settings → General → Keyboard → Keyboards → Add New Keyboard → OpenWhisper.
+| Swift package | [parakeet-coreml-swift](https://github.com/mweinbach/parakeet-coreml-swift) (Apache-2.0), vendored at `Packages/` |
+| Persistence | SwiftData, local-only |
+| Extensions | Keyboard extension planned (Phase 1.5) |
 
 ## Project layout
 
 ```
 openWhisper.xcodeproj
-├── OpenWhisper            — main app (recording, history, settings)
-├── OpenWhisperKeyboard    — keyboard extension (insert from history)
-└── OpenWhisperShared      — shared App Group container + data models
+├── openWhisper/       app source: Models, Services, Views
+├── Packages/          vendored parakeet-coreml-swift (unsafeFlags removed for Xcode)
+├── PLAN.md            development plan, decisions, milestones
+└── README.md          this file
 ```
 
-## Roadmap
+## Getting started
 
-- **Phase 1 (in progress):** MVP app — onboarding, recording → transcription, history, clipboard, settings, download UI
-- **Phase 1.5:** Keyboard extension — history insertion + in-extension transcription (spike)
-- **Phase 2:** Built-in notepad with on-device LLM correction of transcriptions
-- **Phase 3:** App Store release (free)
+1. Open `openWhisper.xcodeproj` in Xcode.
+2. The vendored package is already referenced — no action needed.
+3. Run on a physical iPhone (iOS 18+). The model downloads on first launch (~450 MB).
 
-Detailed planning lives in [PLAN.md](PLAN.md).
+## Up next
+
+- Phase 1.5 — keyboard extension: insert past transcriptions into any text field; feasibility spike for in-extension transcription
+- Phase 2 — built-in notepad with on-device LLM correction of transcriptions
+- Phase 3 — App Store release (free)
+
+Details, decisions and milestones live in [PLAN.md](PLAN.md).
 
 ## License & attribution
 
-- **App source code:** Apache-2.0
-- **`parakeet-coreml-swift`:** Apache-2.0 — © mweinbach
-- **Model weights:** CC-BY-4.0 — [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), Core ML conversion by [mweinbach1](https://huggingface.co/mweinbach1)
+- App source code: Apache-2.0
+- `parakeet-coreml-swift`: Apache-2.0 — mweinbach
+- Model weights: CC-BY-4.0 — NVIDIA Parakeet TDT 0.6B v3, Core ML conversion by [mweinbach1](https://huggingface.co/mweinbach1)
