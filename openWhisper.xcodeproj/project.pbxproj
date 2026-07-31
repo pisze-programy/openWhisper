@@ -71,6 +71,7 @@
 			name = openWhisper;
 			packageProductDependencies = (
 				B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */,
+				D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */,
 			);
 			productName = openWhisper;
 			productReference = 78732CF1301C64E90019D594 /* openWhisper.app */;
@@ -101,7 +102,8 @@
 			mainGroup = 78732CE8301C64E90019D594;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */,
+				A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */,
+				C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 78732CF2301C64E90019D594 /* Products */;
@@ -261,6 +263,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
@@ -294,6 +297,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = openWhisper.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
@@ -345,17 +349,26 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */ = {
+		A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "Packages/parakeet-coreml-swift";
+			relativePath = Packages/parakeet-coreml-swift;
+		};
+		C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = OpenWhisperShared;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */;
+			package = A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "parakeet-coreml-swift" */;
 			productName = ParakeetTDT;
+		};
+		D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */;
+			productName = OpenWhisperShared;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

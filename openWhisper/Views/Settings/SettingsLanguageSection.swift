@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct SettingsLanguageSection: View {
     @Environment(SettingsStore.self) private var settingsStore

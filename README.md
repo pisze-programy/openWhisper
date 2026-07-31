@@ -33,16 +33,6 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 | Persistence | SwiftData, local-only |
 | Extensions | Keyboard extension planned (Phase 1.5) |
 
-## Project layout
-
-```
-openWhisper.xcodeproj
-├── openWhisper/       app source: Models, Services, Views
-├── Packages/          vendored parakeet-coreml-swift (unsafeFlags removed for Xcode)
-├── PLAN.md            development plan, decisions, milestones
-└── README.md          this file
-```
-
 ## Getting started
 
 1. Open `openWhisper.xcodeproj` in Xcode.

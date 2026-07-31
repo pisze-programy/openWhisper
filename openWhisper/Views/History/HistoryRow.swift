@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct HistoryRow: View {
     let item: TranscriptionItem

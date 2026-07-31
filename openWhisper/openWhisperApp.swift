@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import OpenWhisperShared
 
 @main
 struct openWhisperApp: App {
@@ -15,7 +16,8 @@ struct openWhisperApp: App {
         _modelDownload = State(initialValue: .shared)
         _transcription = State(initialValue: TranscriptionService(settings: settings, modelDownload: .shared))
         _recorder = State(initialValue: AudioRecorder())
-        container = try! ModelContainer(for: TranscriptionItem.self)
+        let config = ModelConfiguration(url: ModelLocations.historyStoreURL)
+        container = try! ModelContainer(for: TranscriptionItem.self, configurations: config)
     }
 
     var body: some Scene {

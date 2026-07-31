@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import OpenWhisperShared
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext

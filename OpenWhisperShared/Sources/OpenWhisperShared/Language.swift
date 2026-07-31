@@ -1,11 +1,16 @@
 import Foundation
 
-struct Language: Identifiable, Hashable {
-    let code: String
-    let name: String
-    var id: String { code }
+public struct Language: Identifiable, Hashable {
+    public let code: String
+    public let name: String
+    public var id: String { code }
 
-    static let all: [Language] = [
+    public init(code: String, name: String) {
+        self.code = code
+        self.name = name
+    }
+
+    public static let all: [Language] = [
         Language(code: "bg", name: "Bulgarian"),
         Language(code: "hr", name: "Croatian"),
         Language(code: "cs", name: "Czech"),
@@ -33,7 +38,7 @@ struct Language: Identifiable, Hashable {
         Language(code: "uk", name: "Ukrainian"),
     ]
 
-    static func language(for code: String?) -> Language? {
+    public static func language(for code: String?) -> Language? {
         guard let code else { return nil }
         return all.first { $0.code == code }
     }

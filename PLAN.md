@@ -40,9 +40,9 @@ A simple, free iPhone app that:
 Status legend: **[Done]** implemented and verified · **[Planned]** designed, not yet built.
 
 - **D1 [Done]. 100% on-device processing, local-only data.** Privacy is a feature — recordings never leave the phone, and the history is stored only on the device (no cloud sync, no third-party servers).
-- **D2 [Planned — M2]. App Group** (`group.*`): shared container for the model cache and history database → the keyboard extension uses the same model and history instead of re-downloading ~480 MB.
-- **D3 [Done]. Model download via the low-level path**: `ModelDownloader(cacheDirectory:)` → `ParakeetTranscriber(modelsRoot:cacheDirectory:)` with **`deleteSourceAfterCompile: false`** (required — the package's `resolveModel` only looks inside `modelsRoot`; deleting the `.mlpackage` sources after the first compile breaks every later launch). Download is persisted and **resumable** (survives app kill via the package's per-file size check); custom progress UI. Cache currently lives in the app sandbox's Application Support; moving it into the app group container is part of M2.
-- **D4 [Planned — M2]. History in SwiftData**, store file inside the app group container (readable from the extension). Today the store lives in the app sandbox.
+- **D2 [Done]. App Group** (`group.piszeprogramy.openWhisper`): shared container for the model cache and history database → the keyboard extension will use the same model and history instead of re-downloading ~480 MB.
+- **D3 [Done]. Model download via the low-level path**: `ModelDownloader(cacheDirectory:)` → `ParakeetTranscriber(modelsRoot:cacheDirectory:)` with **`deleteSourceAfterCompile: false`** (required — the package's `resolveModel` only looks inside `modelsRoot`; deleting the `.mlpackage` sources after the first compile breaks every later launch). Download is persisted and **resumable** (survives app kill via the package's per-file size check); custom progress UI. Cache and the SwiftData store live in the App Group container via the `OpenWhisperShared` package.
+- **D4 [Done]. History in SwiftData**, store file inside the app group container (readable from the extension).
 - **D5 [Planned — Phase 1.5]. Keyboard extension**: browse recent transcriptions + insert into the active field (`UITextDocumentProxy`). **Transcribing inside the extension** (loading the ~480 MB model within the extension memory budget) is a **spike in Phase 1.5** — the feasibility result decides whether it ships in 1.5 or moves to Phase 2.
 - **D6 [Done]. Auto-copy to clipboard** after transcription — toggle in settings.
 - **D7 [Done]. Recording rules**: no minimum duration (a 1 s clip may come back empty — acceptable); **maximum recording duration 10 minutes** (auto-stops); **single-flight processing lock** (never two transcriptions at once; recording is blocked while one runs). Audio-session interruptions (calls/Siri) stop the recording and transcribe what was captured. Local patch for bug #1 (short-clip hallucination) kept until the upstream fix lands.
@@ -57,28 +57,28 @@ Status legend: **[Done]** implemented and verified · **[Planned]** designed, no
 
 ```
 openWhisper.xcodeproj
-└── openWhisper (app, SwiftUI, iOS 18+)
-    ├── Models/                    Language, TranscriptionItem (SwiftData)
-    ├── Services/
-    │   ├── Audio/                 AudioRecorder, AudioCapturePipeline, RecorderError
-    │   ├── Transcription/         TranscriptionService, TranscriptionEngine, TranscriptionError
-    │   └── (singletons)           ModelDownloadManager, ModelLocations, ModelStatus, SettingsStore, ClipboardService
-    └── Views/
-        ├── Components/            GlassCard, StatusBadge, ToggleRow, NavigationRow, SectionHeader,
-        │                          EmptyState, ModelCardView, VideoPlaceholder
-        ├── Onboarding/            OnboardingView (paging), IntroView, ModelView, PrivacyView
-        ├── History/               HistoryView, HistoryRow
-        ├── Settings/              SettingsView, SettingsModelSection, SettingsLanguageSection
-        ├── About/                 AboutView
-        └── RootView.swift
+├── openWhisper (app, SwiftUI, iOS 18+)
+│   ├── Services/
+│   │   ├── Audio/                 AudioRecorder, AudioCapturePipeline, RecorderError
+│   │   ├── Transcription/         TranscriptionService, TranscriptionEngine, TranscriptionError
+│   │   └── (singletons)           ModelDownloadManager, ModelStatus, SettingsStore, ClipboardService
+│   └── Views/
+│       ├── Components/            GlassCard, StatusBadge, ToggleRow, NavigationRow, SectionHeader,
+│       │                          EmptyState, ModelCardView, VideoPlaceholder
+│       ├── Onboarding/            OnboardingView (paging), IntroView, ModelView, PrivacyView
+│       ├── History/               HistoryView, HistoryRow
+│       ├── Settings/              SettingsView, SettingsModelSection, SettingsLanguageSection
+│       ├── About/                 AboutView
+│       └── RootView.swift
+├── OpenWhisperShared (local SPM package)   — AppGroup, ModelLocations, TranscriptionItem, Language
+└── Packages/parakeet-coreml-swift (vendored)
 
 Planned (not built yet):
-├── OpenWhisperKeyboard — keyboard extension (Phase 1.5)
-└── OpenWhisperShared   — local SPM package with App Group container (M2)
+└── OpenWhisperKeyboard — keyboard extension (Phase 1.5)
 ```
 
 ### Flow: first launch
-1. Onboarding → model download from HF (progress, resumable) into Application Support → compile `.mlpackage` → `.mlmodelc` (a few seconds).
+1. Onboarding → model download from HF (progress, resumable) into the App Group container → compile `.mlpackage` → `.mlmodelc` (a few seconds).
 2. Subsequent launches: model in cache, start ~0.2 s.
 
 ### Flow: transcription
@@ -90,13 +90,13 @@ iOS deletes an app's sandbox (including `Application Support`) when the app is u
 
 | Data | Location | Survives app deletion? |
 |---|---|---|
-| History + settings (user data) | Application Support (local only, no cloud) | No — accepted trade-off for local-only privacy |
-| Model cache (~480 MB, compiled `.mlmodelc`) | Application Support | No — re-downloaded from HF after reinstall (~450 MB, progress UI) |
-| Preferences (compute units, auto-copy, language) | UserDefaults | No — re-created on reinstall |
+| History + settings (user data) | App Group container (local only, no cloud) | No — accepted trade-off for local-only privacy |
+| Model cache (~480 MB, compiled `.mlmodelc`) | App Group container | No — re-downloaded from HF after reinstall (~450 MB, progress UI) |
+| Preferences (compute units, auto-copy, language) | UserDefaults (app sandbox) | No — re-created on reinstall |
 
 Rules:
 - Never use `Caches` for data that must persist (the system can purge it at any time).
-- The App Group container (planned, M2) is deleted when the *last* app of the group is removed; a reinstall wipes the sandbox regardless.
+- The App Group container is deleted when the *last* app of the group is removed; a reinstall wipes it regardless.
 - History is local-only by design (privacy). If cross-device sync is ever wanted, CloudKit can be added later without changing the data model.
 
 ### §4b. UI & design language (current)
@@ -139,7 +139,7 @@ Mandatory, skippable introduction. **Three steps**, native horizontal paging (`T
 |---|---|---|---|
 | **M0 — Spike** | **Done** | Package integrated (vendored), model download + transcription verified on a physical iPhone, audio pipeline fixed (WAV write via `.inputRanDry`) | Transcription works on device (incl. Polish) |
 | **M1 — MVP app** | **Done** | Onboarding (3 steps, skip, video/screenshot placeholders, background download, resume/fail states); recording → transcription; history (SwiftData); delete / clear / copy; auto-copy; Settings (ModelCardView, compute units, save-to-history, language picker); reusable components; clean file structure | Full cycle working on device |
-| **M2 — App Group** | Planned | Move cache + database into the shared container; refactor to `OpenWhisperShared` | Extension reads history without duplicated data |
+| **M2 — App Group** | **Done** | Shared App Group container (`group.piszeprogramy.openWhisper`); model cache + SwiftData store moved; `OpenWhisperShared` package extracted | Store and model cache live in the group container (verified on simulator) |
 | **Phase 1.5 — Keyboard** | Planned | `OpenWhisperKeyboard`: recent transcriptions, insert into active field; spike: transcription inside the extension (ANE memory feasibility) | Works in any app with text input; feasibility report |
 | **M4 — Release** | Planned | App icon, Polish/English UI, real video/screenshot assets, on-device testing, privacy policy, App Store (free) | App in review / on the store |
 | **Phase 2 — Notepad** | Planned | Separate spec (TBD): notepad + LLM for on-the-fly transcription correction | — |

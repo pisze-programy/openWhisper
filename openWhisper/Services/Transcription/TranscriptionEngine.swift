@@ -1,5 +1,6 @@
 import Foundation
 import ParakeetTDT
+import OpenWhisperShared
 
 nonisolated final class TranscriptionEngine: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.openwhisper.transcribe")

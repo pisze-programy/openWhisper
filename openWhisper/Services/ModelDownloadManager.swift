@@ -1,5 +1,6 @@
 import Foundation
 import ParakeetTDT
+import OpenWhisperShared
 
 @MainActor @Observable
 final class ModelDownloadManager {
