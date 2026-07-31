@@ -8,7 +8,11 @@ nonisolated final class AudioCapturePipeline {
     private var inputSampleRate: Double = 48_000
     private(set) var isRunning = false
 
+    private static let livePreviewMaxSamples = 30 * 16_000
+    private(set) var liveSamples: [Float] = []
+
     func start(outputURL: URL) throws {
+        liveSamples.removeAll(keepingCapacity: true)
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         inputSampleRate = inputFormat.sampleRate
@@ -76,6 +80,13 @@ nonisolated final class AudioCapturePipeline {
         let hasOutput = status == .haveData || status == .inputRanDry
         if hasOutput, conversionError == nil, converted.frameLength > 0 {
             try? outputFile.write(from: converted)
+            if let ch = converted.floatChannelData {
+                let count = Int(converted.frameLength)
+                liveSamples.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: count))
+                if liveSamples.count > Self.livePreviewMaxSamples {
+                    liveSamples.removeFirst(liveSamples.count - Self.livePreviewMaxSamples)
+                }
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ struct openWhisperApp: App {
     @State private var modelDownload: ModelDownloadManager
     @State private var transcription: TranscriptionService
     @State private var recorder: AudioRecorder
+    @State private var toast = ToastCenter()
     private let container: ModelContainer
 
     init() {
@@ -28,6 +29,7 @@ struct openWhisperApp: App {
         .environment(modelDownload)
         .environment(transcription)
         .environment(recorder)
+        .environment(toast)
         .modelContainer(container)
     }
 }

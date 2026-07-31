@@ -9,11 +9,13 @@ struct HistoryView: View {
     @Environment(ModelDownloadManager.self) private var modelDownload
     @Environment(TranscriptionService.self) private var transcription
     @Environment(AudioRecorder.self) private var recorder
+    @Environment(ToastCenter.self) private var toast
 
     @Query(sort: \TranscriptionItem.createdAt, order: .reverse)
     private var items: [TranscriptionItem]
 
-    @State private var showClearConfirm = false
+    @State private var showDeleteConfirm = false
+    @State private var itemPendingDelete: TranscriptionItem?
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isHandlingRecording = false
@@ -23,8 +25,27 @@ struct HistoryView: View {
             List {
                 ForEach(items) { item in
                     HistoryRow(item: item)
-                        .contentShape(Rectangle())
-                        .onTapGesture { copy(item) }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .glassBackground(cornerRadius: 16)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .trailing).combined(with: .opacity)
+                        ))
+                        .contextMenu {
+                            Button {
+                                copy(item)
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
+                            Button(role: .destructive) {
+                                itemPendingDelete = item
+                                showDeleteConfirm = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
                 .onDelete(perform: deleteItems)
             }
@@ -37,19 +58,15 @@ struct HistoryView: View {
                     )
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            .overlay(alignment: .bottom) {
                 recordSection
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
             }
-            .navigationTitle("OpenWhisper")
+            .contentMargins(.bottom, 210, for: .scrollContent)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !items.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Clear All", role: .destructive) {
-                            showClearConfirm = true
-                        }
-                    }
+                ToolbarItem(placement: .principal) {
+                    Text("OpenWhisper")
+                        .font(.subheadline.weight(.semibold))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
@@ -59,13 +76,15 @@ struct HistoryView: View {
                     }
                 }
             }
-            .confirmationDialog(
-                "Clear all transcriptions?",
-                isPresented: $showClearConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Clear All", role: .destructive) { clearAll() }
+            .alert(
+                "Delete this transcription?",
+                isPresented: $showDeleteConfirm,
+                presenting: itemPendingDelete
+            ) { item in
+                Button("Delete", role: .destructive) { delete(item) }
                 Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("This cannot be undone.")
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
@@ -75,11 +94,21 @@ struct HistoryView: View {
         }
         .task {
             recorder.onAutoStop = { stopAndTranscribe() }
+            removeJunkEntries()
         }
+    }
+
+    private var waveformContainer: some View {
+        LiveWaveform(getSamples: { recorder.liveSamples })
+            .frame(maxWidth: .infinity)
+            .frame(height: recorder.isRecording ? 52 : 0, alignment: .center)
+            .clipped()
     }
 
     private var recordSection: some View {
         VStack(spacing: 10) {
+            waveformContainer
+
             if !modelDownload.isReady {
                 NavigationLink {
                     SettingsView()
@@ -99,57 +128,91 @@ struct HistoryView: View {
                 .buttonStyle(.plain)
             }
 
-            GlassCard {
-                VStack(spacing: 12) {
-                    if transcription.isTranscribing || isHandlingRecording {
+            ZStack {
+                if transcription.isTranscribing || isHandlingRecording {
                         HStack(spacing: 8) {
                             ProgressView()
                             Text("Transcribing…")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 20)
+                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     } else {
-                        Button {
-                            if recorder.isRecording {
-                                stopAndTranscribe()
-                            } else {
-                                startRecording()
+                        VStack(spacing: 12) {
+                            Button {} label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(recorder.isRecording ? AnyShapeStyle(Color.red) : AnyShapeStyle(.ultraThinMaterial))
+                                        .frame(width: 72, height: 72)
+                                        .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
+                                    Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
+                                        .font(.system(size: 28, weight: .semibold))
+                                        .foregroundStyle(recorder.isRecording ? .white : Color.accentColor)
+                                }
                             }
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(recorder.isRecording ? Color.red : Color.accentColor)
-                                    .frame(width: 72, height: 72)
-                                    .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
-                                Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!modelDownload.isReady || isHandlingRecording || !transcription.isModelReady)
+                            .buttonStyle(.plain)
+                            .disabled(!modelDownload.isReady || isHandlingRecording || !transcription.isModelReady)
+                            .simultaneousGesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { _ in
+                                        guard !recorder.isRecording else { return }
+                                        startRecording()
+                                    }
+                                    .onEnded { _ in
+                                        stopAndTranscribe()
+                                    }
+                            )
 
-                        if modelDownload.isReady && !transcription.isModelReady {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                Text("Warming the model…")
+                            if modelDownload.isReady && !transcription.isModelReady {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                    Text("Warming the model…")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text(recorder.isRecording ? "Listening…" : "Tap to record")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
+                                    .monospacedDigit()
                             }
-                        } else {
-                            Text(recorder.isRecording ? recorder.elapsed.clockString : "Tap to record")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
                         }
+                        .transition(.opacity)
                     }
                 }
                 .frame(maxWidth: .infinity)
+                .frame(height: 104)
                 .padding(.vertical, 10)
+                .animation(.easeInOut(duration: 0.25), value: transcription.isTranscribing)
+                .animation(.easeInOut(duration: 0.25), value: isHandlingRecording)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(bottomBarBackground)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: recorder.isRecording)
+    }
+
+    private var bottomBarBackground: some View {
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: 24,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: 24,
+            style: .continuous
+        )
+        return Group {
+            if #available(iOS 26.0, *) {
+                shape
+                    .fill(.clear)
+                    .glassEffect(.regular, in: shape)
+            } else {
+                shape
+                    .fill(.ultraThinMaterial)
             }
         }
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private func startRecording() {
@@ -157,6 +220,7 @@ struct HistoryView: View {
         Task { @MainActor in
             do {
                 try await recorder.start()
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } catch {
                 present(error)
             }
@@ -165,6 +229,7 @@ struct HistoryView: View {
 
     private func stopAndTranscribe() {
         guard recorder.isRecording, !transcription.isTranscribing, !isHandlingRecording else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         isHandlingRecording = true
         do {
             let url = try recorder.stop()
@@ -181,12 +246,20 @@ struct HistoryView: View {
     private func transcribe(url: URL) async {
         do {
             let result = try await transcription.transcribe(audioURL: url)
+            let text = TranscriptionValidator.cleanedText(result.text)
+            guard TranscriptionValidator.isMeaningful(text) else {
+                try? FileManager.default.removeItem(at: url)
+                toast.present("No speech detected")
+                return
+            }
             if settings.autoCopy {
-                ClipboardService.copy(result.text)
+                ClipboardService.copy(text)
             }
             if settings.saveToHistory {
-                let item = TranscriptionItem(text: result.text, duration: result.audioDuration, source: "mic")
-                modelContext.insert(item)
+                let item = TranscriptionItem(text: text, duration: result.audioDuration, source: "mic")
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                    modelContext.insert(item)
+                }
                 do {
                     try modelContext.save()
                 } catch {
@@ -199,14 +272,13 @@ struct HistoryView: View {
         try? FileManager.default.removeItem(at: url)
     }
 
-    private func copy(_ item: TranscriptionItem) {
-        ClipboardService.copy(item.text)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-    }
-
-    private func deleteItems(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(items[index])
+    private func removeJunkEntries() {
+        let junk = items.filter { !TranscriptionValidator.isMeaningful($0.text) }
+        guard !junk.isEmpty else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            for item in junk {
+                modelContext.delete(item)
+            }
         }
         do {
             try modelContext.save()
@@ -215,9 +287,28 @@ struct HistoryView: View {
         }
     }
 
-    private func clearAll() {
-        for item in items {
+    private func copy(_ item: TranscriptionItem) {
+        ClipboardService.copy(item.text)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        toast.present("Copied!")
+    }
+
+    private func delete(_ item: TranscriptionItem) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
             modelContext.delete(item)
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            present(error)
+        }
+    }
+
+    private func deleteItems(at offsets: IndexSet) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+            for index in offsets {
+                modelContext.delete(items[index])
+            }
         }
         do {
             try modelContext.save()

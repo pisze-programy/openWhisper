@@ -12,9 +12,7 @@ struct OnboardingModelView: View {
 
             ModelCardView()
 
-            VideoPlaceholder(caption: "How it works — keyboard extension & live transcription (video coming soon)")
-
-            KeyboardSetupCard()
+            VideoPlaceholder(caption: "How it works — live transcription (video coming soon)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)

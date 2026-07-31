@@ -201,9 +201,7 @@ public final class ParakeetTranscriber {
         // return empty text or hallucinate a tail (upstream issue #1). Pad
         // with trailing silence so the shortest dictations still transcribe.
         // The reported audio duration stays the real one.
-        let padded = Self.padToMinDuration(
-            samples, minSeconds: Self.minAudioSeconds, sampleRate: sampleRate
-        )
+        let padded = Self.prepareAudio(samples, sampleRate: sampleRate)
 
         let chunkSamples = chunkMelFrames * featureExtractor.hopLength
 
@@ -254,27 +252,24 @@ public final class ParakeetTranscriber {
 
     // MARK: - Helpers
 
-    /// Minimum audio context the encoder needs to produce text instead of an
-    /// empty result or a hallucinated tail on short clips.
+    /// Minimum total audio context the encoder needs to produce text instead
+    /// of an empty result or a hallucinated tail on short clips.
     private static let minAudioSeconds = 5.0
     /// Short silent lead-in before the speech so the encoder is warm before
     /// the first syllable (fixes the first words being cut off).
     private static let leadInSeconds = 0.5
+    /// Trailing silence appended to every recording so the decoder has
+    /// context after the last word instead of cutting the tail off.
+    private static let trailingPadSeconds = 1.5
 
-    /// Pads a short clip with silence so it reaches at least `minSeconds`:
-    /// a short lead-in on the left (encoder warm-up) and silence on the right
-    /// (avoids a hallucinated tail). Longer audio passes through untouched.
-    private static func padToMinDuration(
-        _ samples: [Float],
-        minSeconds: Double,
-        sampleRate: Int
-    ) -> [Float] {
-        let minSamples = Int(minSeconds * Double(sampleRate))
-        guard samples.count < minSamples else { return samples }
-
-        let leadCount = Int(leadInSeconds * Double(sampleRate))
-        let lead = [Float](repeating: 0, count: leadCount)
-        var padded = lead + samples
+    /// Prepares audio for the encoder: a short lead-in on the left, trailing
+    /// silence on the right (always), and padding to at least `minAudioSeconds`
+    /// for very short clips.
+    private static func prepareAudio(_ samples: [Float], sampleRate: Int) -> [Float] {
+        let lead = [Float](repeating: 0, count: Int(leadInSeconds * Double(sampleRate)))
+        let trail = [Float](repeating: 0, count: Int(trailingPadSeconds * Double(sampleRate)))
+        var padded = lead + samples + trail
+        let minSamples = Int(minAudioSeconds * Double(sampleRate))
         if padded.count < minSamples {
             padded += [Float](repeating: 0, count: minSamples - padded.count)
         }

@@ -10,6 +10,8 @@ final class AudioRecorder {
 
     var onAutoStop: (@MainActor () -> Void)?
 
+    var liveSamples: [Float] { pipeline.liveSamples }
+
     private let pipeline = AudioCapturePipeline()
     private var fileURL: URL?
     private var autoStopTask: Task<Void, Never>?

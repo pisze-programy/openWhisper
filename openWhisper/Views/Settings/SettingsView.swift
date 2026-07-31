@@ -3,20 +3,13 @@ import Foundation
 
 struct SettingsView: View {
     @Environment(SettingsStore.self) private var settingsStore
+    @Environment(ToastCenter.self) private var toast
 
     var body: some View {
         @Bindable var settings = settingsStore
 
         Form {
             SettingsModelSection()
-
-            Section {
-                KeyboardSetupCard()
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            } header: {
-                SectionHeader(title: "Keyboard")
-            }
 
             Section {
                 ToggleRow(title: "Auto-copy to clipboard", isOn: $settings.autoCopy)
@@ -77,6 +70,10 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: settingsStore.autoCopy) { _, _ in toast.present("Saved!") }
+        .onChange(of: settingsStore.saveToHistory) { _, _ in toast.present("Saved!") }
+        .onChange(of: settingsStore.computeUnits) { _, _ in toast.present("Saved!") }
+        .onChange(of: settingsStore.languageCode) { _, _ in toast.present("Saved!") }
     }
 
     private var appVersion: String {
