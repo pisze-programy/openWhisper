@@ -13,12 +13,14 @@ final class SettingsStore {
     var autoCopy: Bool {
         didSet {
             UserDefaults.standard.set(autoCopy, forKey: "settings.autoCopy")
+            UserDefaults(suiteName: AppGroup.identifier)?.set(autoCopy, forKey: "settings.autoCopy")
         }
     }
 
     var saveToHistory: Bool {
         didSet {
             UserDefaults.standard.set(saveToHistory, forKey: "settings.saveToHistory")
+            UserDefaults(suiteName: AppGroup.identifier)?.set(saveToHistory, forKey: "settings.saveToHistory")
         }
     }
 
@@ -29,6 +31,24 @@ final class SettingsStore {
         }
     }
 
+    /// Auto-stop recording when the mic stays silent this long (seconds).
+    /// Fixed at 5 s for now but stored like every other setting so it can
+    /// become user-configurable later. Mirrored to the App Group so the
+    /// keyboard extension can honor it too.
+    var autoStopSilenceSeconds: Double {
+        didSet {
+            UserDefaults.standard.set(autoStopSilenceSeconds, forKey: AppGroup.autoStopSilenceSecondsKey)
+            UserDefaults(suiteName: AppGroup.identifier)?.set(autoStopSilenceSeconds, forKey: AppGroup.autoStopSilenceSecondsKey)
+        }
+    }
+
+    var autoStopOnSilence: Bool {
+        didSet {
+            UserDefaults.standard.set(autoStopOnSilence, forKey: AppGroup.autoStopOnSilenceKey)
+            UserDefaults(suiteName: AppGroup.identifier)?.set(autoStopOnSilence, forKey: AppGroup.autoStopOnSilenceKey)
+        }
+    }
+
     var onboardingCompleted: Bool {
         didSet {
             UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
@@ -36,6 +56,16 @@ final class SettingsStore {
     }
 
     static let maxRecordingDuration: TimeInterval = 600
+
+    /// App-side read of the silence auto-stop toggle (default on).
+    static var silenceAutoStopEnabled: Bool {
+        UserDefaults.standard.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
+    }
+
+    /// App-side read of the silence timeout in seconds (default 5).
+    static var silenceAutoStopSeconds: Double {
+        UserDefaults.standard.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
+    }
 
     init() {
         let defaults = UserDefaults.standard
@@ -48,13 +78,19 @@ final class SettingsStore {
         } else {
             computeUnits = .gpu
         }
-        autoCopy = defaults.object(forKey: "settings.autoCopy") as? Bool ?? true
-        saveToHistory = defaults.object(forKey: "settings.saveToHistory") as? Bool ?? true
+        let copy = defaults.object(forKey: "settings.autoCopy") as? Bool ?? true
+        autoCopy = copy
+        UserDefaults(suiteName: AppGroup.identifier)?.set(copy, forKey: "settings.autoCopy")
+        let history = defaults.object(forKey: "settings.saveToHistory") as? Bool ?? true
+        saveToHistory = history
+        UserDefaults(suiteName: AppGroup.identifier)?.set(history, forKey: "settings.saveToHistory")
         let code = defaults.string(forKey: AppGroup.languageCodeKey)
         languageCode = code
         // Mirror the existing value into the shared App Group suite (didSet does
         // not fire during init) so the keyboard sees it without a re-pick.
         UserDefaults(suiteName: AppGroup.identifier)?.set(code, forKey: AppGroup.languageCodeKey)
         onboardingCompleted = defaults.object(forKey: "settings.onboardingCompleted") as? Bool ?? false
+        autoStopOnSilence = defaults.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
+        autoStopSilenceSeconds = defaults.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
     }
 }

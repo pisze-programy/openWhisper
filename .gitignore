@@ -26,3 +26,5 @@ Package.resolved
 
 # Local debug staging (offline transcription comparison)
 tmp/
+
+playbook.md

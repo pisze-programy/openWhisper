@@ -12,11 +12,23 @@ nonisolated public final class AudioCapturePipeline {
     private var _liveSamples: [Float] = []
     private let samplesLock = NSLock()
 
+    /// When set, the pipeline stops monitoring after the mic has been silent
+    /// for this many seconds (fires `onSilenceThresholdExceeded` once).
+    public var silenceAutoStopSeconds: TimeInterval?
+    /// Fired once when continuous silence reaches `silenceAutoStopSeconds`.
+    /// Called on the audio thread — hop to the main actor before touching UI.
+    public var onSilenceThresholdExceeded: (() -> Void)?
+    /// RMS below this is treated as silence (raw amplitude, ~ room noise).
+    public var silenceRMSThreshold: Float = 0.02
+
     public var liveSamples: [Float] {
         samplesLock.lock()
         defer { samplesLock.unlock() }
         return _liveSamples
     }
+
+    private var silenceElapsed: TimeInterval = 0
+    private var silenceTriggered = false
 
     public init() {}
 
@@ -24,6 +36,8 @@ nonisolated public final class AudioCapturePipeline {
         samplesLock.lock()
         _liveSamples.removeAll(keepingCapacity: true)
         samplesLock.unlock()
+        silenceElapsed = 0
+        silenceTriggered = false
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         inputSampleRate = inputFormat.sampleRate
@@ -99,7 +113,27 @@ nonisolated public final class AudioCapturePipeline {
                     _liveSamples.removeFirst(_liveSamples.count - Self.livePreviewMaxSamples)
                 }
                 samplesLock.unlock()
+                updateSilenceMonitoring(samples: ch[0], count: count)
             }
+        }
+    }
+
+    private func updateSilenceMonitoring(samples: UnsafePointer<Float>, count: Int) {
+        guard let silenceAutoStopSeconds, !silenceTriggered, count > 0 else { return }
+        var sum: Double = 0
+        for i in 0..<count {
+            let s = samples[i]
+            sum += Double(s) * Double(s)
+        }
+        let rms = Float(sqrt(sum / Double(count)))
+        if rms < silenceRMSThreshold {
+            silenceElapsed += Double(count) / 16_000.0
+            if silenceElapsed >= silenceAutoStopSeconds {
+                silenceTriggered = true
+                onSilenceThresholdExceeded?()
+            }
+        } else {
+            silenceElapsed = 0
         }
     }
 }

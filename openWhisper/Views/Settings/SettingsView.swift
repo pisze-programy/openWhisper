@@ -11,6 +11,8 @@ struct SettingsView: View {
         Form {
             SettingsModelSection()
 
+            SettingsKeyboardSection()
+
             Section {
                 ToggleRow(title: "Auto-copy to clipboard", isOn: $settings.autoCopy)
 
@@ -18,6 +20,15 @@ struct SettingsView: View {
                     Text("Max recording duration")
                     Spacer()
                     Text("10 minutes")
+                        .foregroundStyle(.secondary)
+                }
+
+                ToggleRow(title: "Auto-stop on silence", isOn: $settings.autoStopOnSilence)
+
+                HStack {
+                    Text("Silence timeout")
+                    Spacer()
+                    Text("5 seconds")
                         .foregroundStyle(.secondary)
                 }
             } header: {

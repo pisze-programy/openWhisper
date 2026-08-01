@@ -1,10 +1,13 @@
-import OpenWhisperShared
 import SwiftUI
 
-struct LiveWaveform: View {
-    let getSamples: @MainActor () -> [Float]
+public struct LiveWaveform: View {
+    public let getSamples: @MainActor () -> [Float]
 
-    var body: some View {
+    public init(getSamples: @escaping @MainActor () -> [Float]) {
+        self.getSamples = getSamples
+    }
+
+    public var body: some View {
         TimelineView(.periodic(from: .now, by: 0.12)) { _ in
             let bars = WaveformBars.bars(from: getSamples())
             HStack(alignment: .center, spacing: 3) {

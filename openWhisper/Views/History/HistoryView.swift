@@ -143,18 +143,9 @@ struct HistoryView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     } else {
                         VStack(spacing: 12) {
-                            Button {} label: {
-                                ZStack {
-                                    Circle()
-                                        .fill(recorder.isRecording ? AnyShapeStyle(Color.red) : AnyShapeStyle(.ultraThinMaterial))
-                                        .frame(width: 72, height: 72)
-                                        .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
-                                    Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                                        .font(.system(size: 28, weight: .semibold))
-                                        .foregroundStyle(recorder.isRecording ? .white : Color.accentColor)
-                                }
+                            MicRecordButton(isRecording: recorder.isRecording, size: 72) {
+                                // Tapping alone does nothing — recording is press-and-hold
                             }
-                            .buttonStyle(.plain)
                             .disabled(!modelDownload.isReady || isHandlingRecording || !transcription.isModelReady)
                             .simultaneousGesture(
                                 DragGesture(minimumDistance: 0)
@@ -280,23 +271,7 @@ struct HistoryView: View {
         } catch {
             present(error)
         }
-        #if DEBUG
-        keepDebugRecording(url)
-        #endif
         try? FileManager.default.removeItem(at: url)
-    }
-
-    /// TEMP DEBUG — keeps the raw recording in the app's tmp folder for offline
-    /// transcription comparison on the Mac. Remove together with the `#if DEBUG`
-    /// call above before release.
-    private func keepDebugRecording(_ url: URL) {
-        let debugDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("DebugRecordings", isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: debugDir, withIntermediateDirectories: true)
-            let debugURL = debugDir.appendingPathComponent("rec-\(Int(Date().timeIntervalSince1970)).wav")
-            try FileManager.default.copyItem(at: url, to: debugURL)
-        } catch {}
     }
 
     private func removeJunkEntries() {

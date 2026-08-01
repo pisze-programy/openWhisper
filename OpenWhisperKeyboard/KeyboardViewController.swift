@@ -1,55 +1,17 @@
 import UIKit
-import SwiftData
+import SwiftUI
+import Combine
 import os
+import SwiftData
 import OpenWhisperShared
 
-final class KeyboardViewController: UIInputViewController, UITableViewDataSource, UITableViewDelegate {
-    private let languageLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 11)
-        label.textColor = .secondaryLabel
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private lazy var headerBar: UIStackView = {
-        let titleLabel = UILabel()
-        titleLabel.text = "OpenWhisper"
-        titleLabel.font = .boldSystemFont(ofSize: 15)
-        let hintLabel = UILabel()
-        hintLabel.text = "Tap a transcription to insert it"
-        hintLabel.font = .systemFont(ofSize: 12)
-        hintLabel.textColor = .secondaryLabel
-        let stack = UIStackView(arrangedSubviews: [titleLabel, hintLabel, languageLabel])
-        stack.axis = .vertical
-        stack.spacing = 2
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        return stack
-    }()
-
-    private let tableView: UITableView = {
-        let table = UITableView(frame: .zero, style: .plain)
-        table.rowHeight = UITableView.automaticDimension
-        table.estimatedRowHeight = 60
-        table.translatesAutoresizingMaskIntoConstraints = false
-        return table
-    }()
-
-    private let emptyLabel: UILabel = {
-        let label = UILabel()
-        label.text = "No transcriptions yet — dictate in OpenWhisper first"
-        label.font = .systemFont(ofSize: 14)
-        label.textColor = .secondaryLabel
-        label.textAlignment = .center
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private var container: ModelContainer?
-    private var items: [TranscriptionItem] = []
-    private var isHistoryLoading = false
+final class KeyboardViewController: UIInputViewController {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "keyboard")
+
+    @MainActor private let model = KeyboardDictationModel()
+
+    private var hosting: UIHostingController<RecordingSurface>?
+    private var cancellables = Set<AnyCancellable>()
 
     /// UIKit queries this when deciding dictation support for the keyboard.
     /// Returning nil (the default) makes TextInput's
@@ -94,7 +56,23 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
     override func viewDidLoad() {
         super.viewDidLoad()
         configureDictationBehavior()
-        setupLayout()
+        // Transparent root so the system keyboard background shows through —
+        // UIHostingController's view is opaque/black by default otherwise.
+        view.backgroundColor = .clear
+
+        // Insert the transcribed text back into the host document, honoring
+        // the shared auto-copy / save-to-history settings.
+        model.onInsertText = { [weak self] text in
+            self?.insertText(text)
+        }
+
+        // RecordingSurface captures the @Published values at construction, so
+        // rebuild the root view whenever the model changes.
+        model.objectWillChange
+            .sink { [weak self] _ in self?.installSurface() }
+            .store(in: &cancellables)
+
+        installSurface()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -104,109 +82,63 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
         configureDictationBehavior()
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        UserDefaults(suiteName: AppGroup.identifier)?.set(Date(), forKey: AppGroup.keyboardLastUsedKey)
-        loadHistory()
-        updateLanguageLabel()
-    }
+    private func installSurface() {
+        let surface = RecordingSurface(
+            isRecording: model.isRecording,
+            isTranscribing: model.isTranscribing,
+            error: model.error,
+            elapsed: model.elapsed,
+            getSamples: { [weak model] in model?.liveSamples ?? [] },
+            onMicTap: { [weak model] in model?.start() },
+            onStop: { [weak model] in model?.stop() },
+            onCancel: { [weak model] in model?.cancel() }
+        )
+        let hosting = UIHostingController(rootView: surface)
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        // Default hosting view background is opaque black — make it clear so
+        // the system keyboard background (like the native keyboard) shows.
+        hosting.view.backgroundColor = .clear
+        hosting.view.isOpaque = false
 
-    private func showMessage(_ message: String) {
-        items = []
-        emptyLabel.text = message
-        updateVisibility()
-    }
+        if let old = self.hosting {
+            old.willMove(toParent: nil)
+            old.view.removeFromSuperview()
+            old.removeFromParent()
+        }
 
-    private func setupLayout() {
-        view.addSubview(headerBar)
-        view.addSubview(tableView)
-        view.addSubview(emptyLabel)
-
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-
+        addChild(hosting)
+        view.addSubview(hosting.view)
+        hosting.didMove(toParent: self)
         NSLayoutConstraint.activate([
-            headerBar.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
-            headerBar.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            headerBar.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-
-            tableView.topAnchor.constraint(equalTo: headerBar.bottomAnchor, constant: 4),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            emptyLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 24),
-            emptyLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24)
+            hosting.view.topAnchor.constraint(equalTo: view.topAnchor),
+            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        self.hosting = hosting
     }
 
-    private func updateLanguageLabel() {
-        let code = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.languageCodeKey)
-        let name = Language.language(for: code)?.name ?? "Auto"
-        languageLabel.text = "using \(name) · change in OpenWhisper → Settings"
+    private func insertText(_ text: String) {
+        guard !text.isEmpty else { return }
+        textDocumentProxy.insertText(text)
+        if UserDefaults(suiteName: AppGroup.identifier)?.object(forKey: "settings.autoCopy") as? Bool ?? true {
+            UIPasteboard.general.string = text
+        }
+        saveToHistory(text)
     }
 
-    private func loadHistory() {
-        guard !isHistoryLoading, container == nil else { return }
-        isHistoryLoading = true
+    private func saveToHistory(_ text: String) {
         let storeURL = ModelLocations.historyStoreURL
-        logger.info("Loading history from \(storeURL.path)")
-        Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self else { return }
-            // SwiftData containers are safe to construct off the main thread;
-            // only mainContext usage happens back on the main actor.
-            let container = try? ModelContainer(
+        let duration = model.controller.elapsed
+        Task.detached(priority: .utility) {
+            guard let container = try? ModelContainer(
                 for: TranscriptionItem.self,
                 configurations: ModelConfiguration(url: storeURL)
-            )
-            await MainActor.run {
-                self.finishLoading(container: container)
-            }
+            ) else { return }
+            let context = ModelContext(container)
+            let item = TranscriptionItem(text: text, duration: duration, source: "keyboard")
+            context.insert(item)
+            try? context.save()
         }
-    }
-
-    private func finishLoading(container: ModelContainer?) {
-        isHistoryLoading = false
-        guard let container else {
-            logger.error("SwiftData container unavailable — showing empty state")
-            showMessage("History unavailable right now")
-            return
-        }
-        self.container = container
-        do {
-            var descriptor = FetchDescriptor<TranscriptionItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
-            descriptor.fetchLimit = 50
-            items = try container.mainContext.fetch(descriptor)
-        } catch {
-            logger.error("History fetch failed: \(error.localizedDescription, privacy: .public)")
-            items = []
-        }
-        updateVisibility()
-    }
-
-    private func updateVisibility() {
-        tableView.isHidden = items.isEmpty
-        emptyLabel.isHidden = !items.isEmpty
-        tableView.reloadData()
-    }
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        items.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        cell.textLabel?.numberOfLines = 3
-        cell.textLabel?.text = items[indexPath.row].text
-        return cell
-    }
-
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        guard indexPath.row < items.count else { return }
-        textDocumentProxy.insertText(items[indexPath.row].text)
     }
 }

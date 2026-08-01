@@ -41,11 +41,19 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 
 ## Up next
 
-- Phase 1.5 — keyboard extension: full QWERTY keyboard with cloud dictation (OpenRouter `nvidia/parakeet-tdt-0.6b-v3`; user-provided API key) + insert recent transcriptions into any text field. No model loads inside the extension. Details in [PLAN.md](PLAN.md) §4e.
-- Phase 2 — built-in notepad with on-device LLM correction of transcriptions
-- Phase 3 — App Store release (free)
+- Phase 1.5 — keyboard extension: full QWERTY keyboard with cloud dictation (OpenRouter `nvidia/parakeet-tdt-0.6b-v3`). **Paid tier** — free users see the paywall. No model loads inside the extension. Details in [PLAN.md](PLAN.md) §4e.
+- Phase 2 — **notepad** (free): Apple-style categories/tabs + documents; **LLM polish with styles** (paid): cloud LLM (OpenRouter) rewrites transcriptions into selectable styles (formal / casual / optimistic / …).
+- Phase 3 — App Store release: free tier (on-device) + paid subscription (keyboard + LLM polish).
 
 Details, decisions and milestones live in [PLAN.md](PLAN.md).
+
+## Support
+
+OpenWhisper is free and open source. If it saves you time, please consider:
+
+- starring the repo, and
+- sponsoring the project (GitHub Sponsors), or
+- upgrading to the **paid tier** — the keyboard extension (dictate anywhere) and AI text polish with styles. It funds development while the core app stays free and private.
 
 ## License & attribution
 

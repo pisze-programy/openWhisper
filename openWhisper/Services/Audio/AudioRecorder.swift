@@ -48,6 +48,17 @@ final class AudioRecorder {
 
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Recording-\(UUID().uuidString).wav")
+        if SettingsStore.silenceAutoStopEnabled {
+            pipeline.silenceAutoStopSeconds = SettingsStore.silenceAutoStopSeconds
+        } else {
+            pipeline.silenceAutoStopSeconds = nil
+        }
+        pipeline.onSilenceThresholdExceeded = { [weak self] in
+            // Callback runs on the audio thread — hop to the main actor.
+            Task { @MainActor [weak self] in
+                self?.performAutoStop()
+            }
+        }
         do {
             try pipeline.start(outputURL: url)
         } catch {
