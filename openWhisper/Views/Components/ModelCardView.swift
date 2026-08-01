@@ -6,8 +6,15 @@ struct ModelCardView: View {
     var body: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                StatusBadge(status: modelDownload.status)
-                    .fixedSize()
+                // The progress bar below already shows the download percentage —
+                // the badge would duplicate it, so it's hidden while downloading.
+                switch modelDownload.status {
+                case .downloading:
+                    EmptyView()
+                default:
+                    StatusBadge(status: modelDownload.status)
+                        .fixedSize()
+                }
 
                 HStack(spacing: 10) {
                     Image(systemName: "waveform.badge.mic")
@@ -67,13 +74,18 @@ struct ModelCardView: View {
                         Text("Saved on this device — ready to transcribe")
                             .font(.footnote)
                     }
-                    Button {
-                        Task { await modelDownload.startDownload(force: true) }
-                    } label: {
-                        Text("Re-download Model")
+                    HStack(spacing: 8) {
+                        Text("Something went wrong?")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        Button {
+                            Task { await modelDownload.startDownload(force: true) }
+                        } label: {
+                            Text("Re-download Model")
+                        }
+                        .font(.footnote)
+                        .buttonStyle(.borderless)
                     }
-                    .font(.footnote)
-                    .buttonStyle(.borderless)
 
                 case .failed(let message):
                     Text(message)

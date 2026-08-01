@@ -23,3 +23,6 @@ xcuserdata/
 /3
 /3,
 Package.resolved
+
+# Local debug staging (offline transcription comparison)
+tmp/

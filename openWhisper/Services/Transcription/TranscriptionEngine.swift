@@ -1,30 +1,38 @@
 import Foundation
 import ParakeetTDT
+import OpenWhisperShared
 
-public final class TranscriptionEngine: @unchecked Sendable {
+nonisolated final class TranscriptionEngine: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.openwhisper.transcribe")
     private var transcriber: ParakeetTranscriber?
     private var currentComputeUnits: ParakeetComputeUnits?
 
-    public init() {}
+    init() {}
 
-    public func prepare(computeUnits: ParakeetComputeUnits) throws {
+    func prepare(computeUnits: ParakeetComputeUnits) throws {
         try queue.sync { _ = try makeTranscriber(computeUnits: computeUnits) }
     }
 
-    public func release() {
+    func release() {
         queue.sync {
             transcriber = nil
             currentComputeUnits = nil
         }
     }
 
-    public func transcribe(audioURL: URL, computeUnits: ParakeetComputeUnits) throws -> Transcription {
-        let samples = try AudioLoader.loadMono16k(at: audioURL)
+    func transcribe(audioURL: URL, computeUnits: ParakeetComputeUnits) throws -> Transcription {
+        let samples: [Float]
+        do {
+            samples = try AudioLoader.loadMono16k(at: audioURL)
+        } catch {
+            // loadMono16k throws raw ParakeetError (e.g. .audioEmpty when the
+            // recording captured no samples) — map it to the user-facing text.
+            throw Self.map(error)
+        }
         return try transcribe(samples: samples, computeUnits: computeUnits)
     }
 
-    public func transcribe(samples: [Float], computeUnits: ParakeetComputeUnits) throws -> Transcription {
+    func transcribe(samples: [Float], computeUnits: ParakeetComputeUnits) throws -> Transcription {
         let normalized = AudioNormalizer.process(samples)
         do {
             return try queue.sync {

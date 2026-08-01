@@ -1,9 +1,18 @@
 import UIKit
 import SwiftData
+import os
 import OpenWhisperShared
 
 final class KeyboardViewController: UIInputViewController, UITableViewDataSource, UITableViewDelegate {
-    private let headerBar: UIStackView = {
+    private let languageLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 11)
+        label.textColor = .secondaryLabel
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private lazy var headerBar: UIStackView = {
         let titleLabel = UILabel()
         titleLabel.text = "OpenWhisper"
         titleLabel.font = .boldSystemFont(ofSize: 15)
@@ -11,7 +20,7 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
         hintLabel.text = "Tap a transcription to insert it"
         hintLabel.font = .systemFont(ofSize: 12)
         hintLabel.textColor = .secondaryLabel
-        let stack = UIStackView(arrangedSubviews: [titleLabel, hintLabel])
+        let stack = UIStackView(arrangedSubviews: [titleLabel, hintLabel, languageLabel])
         stack.axis = .vertical
         stack.spacing = 2
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -39,31 +48,67 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
 
     private var container: ModelContainer?
     private var items: [TranscriptionItem] = []
+    private var isHistoryLoading = false
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "keyboard")
+
+    /// UIKit queries this when deciding dictation support for the keyboard.
+    /// Returning nil (the default) makes TextInput's
+    /// `TIGetDefaultDictationLanguagesForKeyboardLanguage` crash the host app /
+    /// SpringBoard with "key cannot be nil" on iOS 26.x — so always return a
+    /// valid identifier, honoring the language picked in the OpenWhisper app.
+    override var primaryLanguage: String? {
+        get {
+            let code = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.languageCodeKey)
+            return Self.languageIdentifier(for: code)
+        }
+        set {}
+    }
+
+    private static func languageIdentifier(for code: String?) -> String {
+        switch code {
+        case "en": return "en-US"
+        case "pl": return "pl-PL"
+        default: return "en-US"
+        }
+    }
+
+    // The system injects its own dictation (mic) button when it believes the
+    // keyboard relies on system dictation. Advertising our own dictation
+    // support (hasDictationKey = true) makes iOS keep its mic out — but the
+    // flag must be set in the initializer, not just viewDidLoad (per verified
+    // community findings for iOS 16+).
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        configureDictationBehavior()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        configureDictationBehavior()
+    }
+
+    private func configureDictationBehavior() {
+        hasDictationKey = true
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        configureDictationBehavior()
         setupLayout()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // The system re-evaluates the dictation key each time the keyboard is
+        // presented, so (re)apply it here as well.
+        configureDictationBehavior()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-
-        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) != nil else {
-            showMessage("App Group unavailable — enable App Groups in Xcode (Signing & Capabilities) and rebuild")
-            return
-        }
-
-        do {
-            container = try ModelContainer(
-                for: TranscriptionItem.self,
-                configurations: ModelConfiguration(url: ModelLocations.historyStoreURL)
-            )
-        } catch {
-            showMessage("Store error: \(error.localizedDescription)")
-            return
-        }
         UserDefaults(suiteName: AppGroup.identifier)?.set(Date(), forKey: AppGroup.keyboardLastUsedKey)
         loadHistory()
+        updateLanguageLabel()
     }
 
     private func showMessage(_ message: String) {
@@ -98,17 +143,45 @@ final class KeyboardViewController: UIInputViewController, UITableViewDataSource
         ])
     }
 
+    private func updateLanguageLabel() {
+        let code = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.languageCodeKey)
+        let name = Language.language(for: code)?.name ?? "Auto"
+        languageLabel.text = "using \(name) · change in OpenWhisper → Settings"
+    }
+
     private func loadHistory() {
+        guard !isHistoryLoading, container == nil else { return }
+        isHistoryLoading = true
+        let storeURL = ModelLocations.historyStoreURL
+        logger.info("Loading history from \(storeURL.path)")
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            // SwiftData containers are safe to construct off the main thread;
+            // only mainContext usage happens back on the main actor.
+            let container = try? ModelContainer(
+                for: TranscriptionItem.self,
+                configurations: ModelConfiguration(url: storeURL)
+            )
+            await MainActor.run {
+                self.finishLoading(container: container)
+            }
+        }
+    }
+
+    private func finishLoading(container: ModelContainer?) {
+        isHistoryLoading = false
         guard let container else {
-            items = []
-            updateVisibility()
+            logger.error("SwiftData container unavailable — showing empty state")
+            showMessage("History unavailable right now")
             return
         }
+        self.container = container
         do {
             var descriptor = FetchDescriptor<TranscriptionItem>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
             descriptor.fetchLimit = 50
             items = try container.mainContext.fetch(descriptor)
         } catch {
+            logger.error("History fetch failed: \(error.localizedDescription, privacy: .public)")
             items = []
         }
         updateVisibility()

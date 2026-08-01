@@ -6,9 +6,9 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 
 ## Features
 
-- Voice-to-text on device, with selectable compute units (ANE / GPU / CPU)
+- Voice-to-text on device, with selectable compute units (GPU / CPU)
 - 25 European languages, auto-detected; punctuation and capitalization built in
-- Transcription history: copy (tap), delete (swipe), clear all
+- Transcription history: copy (tap), delete (swipe)
 - Auto-copy to clipboard after each transcription
 - Up to 10-minute recordings; processing is serialized (no concurrent transcriptions)
 - 3-step onboarding: intro, one-time model download, privacy promise
@@ -19,7 +19,7 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 
 - Dictate a message, then paste it straight into Messages or Mail (auto-copy is on by default).
 - Transcribe a short note or a meeting point without typing.
-- Come back later and copy any past transcription again — or delete it, or clear the whole history.
+- Come back later and copy any past transcription again — or delete it.
 - Record up to 10 minutes in one take; the app stops and transcribes automatically at the limit.
 
 ## Tech stack
@@ -31,7 +31,7 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 | Speech model | [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) → [Core ML](https://huggingface.co/mweinbach1/parakeet-tdt-0.6b-v3-coreml) (CC-BY-4.0) |
 | Swift package | [parakeet-coreml-swift](https://github.com/mweinbach/parakeet-coreml-swift) (Apache-2.0), vendored at `Packages/` |
 | Persistence | SwiftData, local-only |
-| Extensions | Keyboard extension planned (Phase 1.5) |
+| Extensions | Keyboard extension (Phase 1.5): full keyboard + cloud dictation via OpenRouter |
 
 ## Getting started
 
@@ -41,7 +41,7 @@ OpenWhisper turns your voice into text directly on your iPhone using the Parakee
 
 ## Up next
 
-- Phase 1.5 — keyboard extension: insert past transcriptions into any text field; feasibility spike for in-extension transcription
+- Phase 1.5 — keyboard extension: full QWERTY keyboard with cloud dictation (OpenRouter `nvidia/parakeet-tdt-0.6b-v3`; user-provided API key) + insert recent transcriptions into any text field. No model loads inside the extension. Details in [PLAN.md](PLAN.md) §4e.
 - Phase 2 — built-in notepad with on-device LLM correction of transcriptions
 - Phase 3 — App Store release (free)
 

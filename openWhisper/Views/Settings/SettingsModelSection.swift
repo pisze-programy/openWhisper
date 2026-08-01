@@ -7,7 +7,6 @@ struct SettingsModelSection: View {
     private let computeUnitOptions: [(unit: ParakeetComputeUnits, label: String)] = [
         (unit: .gpu, label: "GPU"),
         (unit: .cpu, label: "CPU"),
-        (unit: .all, label: "All"),
     ]
 
     var body: some View {
@@ -28,7 +27,7 @@ struct SettingsModelSection: View {
             }
             .pickerStyle(.menu)
         } footer: {
-            Text("Which hardware runs the transcription on your device. GPU is the default — fastest on most devices. CPU uses the least memory; All lets Core ML choose.")
+            Text("Which hardware runs the transcription on your device. GPU is the default — fastest on most devices; CPU uses the least memory.")
         }
     }
 }

@@ -1,12 +1,12 @@
 import Foundation
 
-enum RecorderError: LocalizedError {
+public enum RecorderError: LocalizedError {
     case permissionDenied
     case formatUnavailable
     case noRecording
     case alreadyRecording
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .permissionDenied:
             return "Microphone access was denied. Enable it in Settings."

@@ -1,18 +1,29 @@
 @preconcurrency import AVFoundation
 import Foundation
 
-nonisolated final class AudioCapturePipeline {
+nonisolated public final class AudioCapturePipeline {
     private let engine = AVAudioEngine()
     private var converter: AVAudioConverter?
     private var outputFile: AVAudioFile?
     private var inputSampleRate: Double = 48_000
-    private(set) var isRunning = false
+    public private(set) var isRunning = false
 
     private static let livePreviewMaxSamples = 30 * 16_000
-    private(set) var liveSamples: [Float] = []
+    private var _liveSamples: [Float] = []
+    private let samplesLock = NSLock()
 
-    func start(outputURL: URL) throws {
-        liveSamples.removeAll(keepingCapacity: true)
+    public var liveSamples: [Float] {
+        samplesLock.lock()
+        defer { samplesLock.unlock() }
+        return _liveSamples
+    }
+
+    public init() {}
+
+    public func start(outputURL: URL) throws {
+        samplesLock.lock()
+        _liveSamples.removeAll(keepingCapacity: true)
+        samplesLock.unlock()
         let inputNode = engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         inputSampleRate = inputFormat.sampleRate
@@ -43,7 +54,7 @@ nonisolated final class AudioCapturePipeline {
         isRunning = true
     }
 
-    func stop() {
+    public func stop() {
         guard isRunning else { return }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
@@ -82,10 +93,12 @@ nonisolated final class AudioCapturePipeline {
             try? outputFile.write(from: converted)
             if let ch = converted.floatChannelData {
                 let count = Int(converted.frameLength)
-                liveSamples.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: count))
-                if liveSamples.count > Self.livePreviewMaxSamples {
-                    liveSamples.removeFirst(liveSamples.count - Self.livePreviewMaxSamples)
+                samplesLock.lock()
+                _liveSamples.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: count))
+                if _liveSamples.count > Self.livePreviewMaxSamples {
+                    _liveSamples.removeFirst(_liveSamples.count - Self.livePreviewMaxSamples)
                 }
+                samplesLock.unlock()
             }
         }
     }

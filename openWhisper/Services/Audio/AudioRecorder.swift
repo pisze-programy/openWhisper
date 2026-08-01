@@ -1,3 +1,5 @@
+import OpenWhisperShared
+
 @preconcurrency import AVFoundation
 import Foundation
 

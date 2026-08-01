@@ -1,6 +1,8 @@
 import Foundation
+import os
 import ParakeetTDT
 import OpenWhisperShared
+import UIKit
 
 @MainActor @Observable
 final class TranscriptionService {
@@ -11,6 +13,7 @@ final class TranscriptionService {
     private let settings: SettingsStore
     private let modelDownload: ModelDownloadManager
     private let engine: TranscriptionEngine
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "transcription")
 
     init(settings: SettingsStore, modelDownload: ModelDownloadManager) {
         self.settings = settings
@@ -58,9 +61,41 @@ final class TranscriptionService {
         isTranscribing = true
         defer { isTranscribing = false }
 
-        let computeUnits = settings.computeUnits
         let engine = self.engine
 
+        // Core ML's default compute path is GPU, and iOS forbids GPU/Metal work
+        // while the app is in the background ("Insufficient Permission to submit
+        // GPU work from background"). Claim a short background task so the model
+        // load + inference can finish even if the user switches apps right after
+        // releasing the mic, and pick the compute units accordingly: the user's
+        // choice in the foreground, CPU in the background (CPU is not subject to
+        // the GPU restriction). A GPU failure mid-flight falls back to CPU.
+        let backgroundTask = TranscriptionBackgroundTask(name: "openwhisper.transcribe")
+        defer { backgroundTask.end() }
+
+        let preferred = settings.computeUnits
+        let isActive = UIApplication.shared.applicationState == .active
+        // The user's compute-units choice is always honoured in the foreground.
+        // The only exception is iOS itself: GPU/Metal work is forbidden while the
+        // app is in the background, so when the app is already backgrounded we
+        // start directly on CPU (avoids a guaranteed GPU failure + re-load), and
+        // if the app backgrounds mid-transcription the GPU failure is retried
+        // once on CPU. CPU is never used to rescue a real foreground failure.
+        let initialUnits = isActive ? preferred : ParakeetComputeUnits.cpu
+        do {
+            return try await runTranscription(audioURL: audioURL, computeUnits: initialUnits, engine: engine)
+        } catch {
+            guard preferred != .cpu, !isActive else { throw error }
+            logger.error("GPU transcription failed in background (\(error.localizedDescription, privacy: .public)) — retrying on CPU")
+            return try await runTranscription(audioURL: audioURL, computeUnits: .cpu, engine: engine)
+        }
+    }
+
+    private func runTranscription(
+        audioURL: URL,
+        computeUnits: ParakeetComputeUnits,
+        engine: TranscriptionEngine
+    ) async throws -> TranscriptionResult {
         let transcription = try await Task.detached(priority: .userInitiated) {
             try engine.transcribe(audioURL: audioURL, computeUnits: computeUnits)
         }.value
@@ -69,5 +104,29 @@ final class TranscriptionService {
             audioDuration: transcription.audioDurationSeconds,
             confidence: transcription.confidence
         )
+    }
+}
+
+/// Small wrapper around `UIBackgroundTaskIdentifier` so the expiration handler
+/// can safely end the task without Swift concurrency capture issues.
+private final class TranscriptionBackgroundTask {
+    private var identifier: UIBackgroundTaskIdentifier = .invalid
+
+    init(name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            guard let self, self.identifier != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(self.identifier)
+            self.identifier = .invalid
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
+    }
+
+    deinit {
+        end()
     }
 }

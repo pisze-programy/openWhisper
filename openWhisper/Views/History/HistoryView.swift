@@ -280,7 +280,23 @@ struct HistoryView: View {
         } catch {
             present(error)
         }
+        #if DEBUG
+        keepDebugRecording(url)
+        #endif
         try? FileManager.default.removeItem(at: url)
+    }
+
+    /// TEMP DEBUG — keeps the raw recording in the app's tmp folder for offline
+    /// transcription comparison on the Mac. Remove together with the `#if DEBUG`
+    /// call above before release.
+    private func keepDebugRecording(_ url: URL) {
+        let debugDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DebugRecordings", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: debugDir, withIntermediateDirectories: true)
+            let debugURL = debugDir.appendingPathComponent("rec-\(Int(Date().timeIntervalSince1970)).wav")
+            try FileManager.default.copyItem(at: url, to: debugURL)
+        } catch {}
     }
 
     private func removeJunkEntries() {

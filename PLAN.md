@@ -9,7 +9,7 @@ An iOS app for fully on-device speech-to-text, with a transcription history, cli
 A simple, free iPhone app that:
 
 - records voice and transcribes it **on-device** (no cloud) with the **Parakeet TDT 0.6B v3** model (Core ML) via the **parakeet-coreml-swift** package;
-- shows a **transcription history** (add / delete / clear all / copy to clipboard);
+- shows a **transcription history** (add / delete / copy to clipboard);
 - can **auto-copy** a transcription to the clipboard after recording (paste it into any app);
 - ships a **system keyboard extension** — insert transcriptions directly into the active text field without opening the app;
 - is published to the App Store as a free app for other users.
@@ -43,7 +43,7 @@ Status legend: **[Done]** implemented and verified · **[Planned]** designed, no
 - **D2 [Done]. App Group** (`group.piszeprogramy.openWhisper`): shared container for the model cache and history database → the keyboard extension will use the same model and history instead of re-downloading ~480 MB.
 - **D3 [Done]. Model download via the low-level path**: `ModelDownloader(cacheDirectory:)` → `ParakeetTranscriber(modelsRoot:cacheDirectory:)` with **`deleteSourceAfterCompile: false`** (required — the package's `resolveModel` only looks inside `modelsRoot`; deleting the `.mlpackage` sources after the first compile breaks every later launch). Download is persisted and **resumable** (survives app kill via the package's per-file size check); custom progress UI. Cache and the SwiftData store live in the App Group container via the `OpenWhisperShared` package.
 - **D4 [Done]. History in SwiftData**, store file inside the app group container (readable from the extension).
-- **D5 [Planned — Phase 1.5]. Keyboard extension**: browse recent transcriptions + insert into the active field (`UITextDocumentProxy`). **Transcribing inside the extension** (loading the ~480 MB model within the extension memory budget) is a **spike in Phase 1.5** — the feasibility result decides whether it ships in 1.5 or moves to Phase 2.
+- **D5 [Planned — Phase 1.5]. Keyboard extension (redesigned)**: a **full keyboard** (QWERTY typing) plus **cloud dictation** — record → transcribe via an **external STT provider** (OpenRouter `nvidia/parakeet-tdt-0.6b-v3`) → insert text into the active field via `UITextDocumentProxy`. The ~480 MB model is **never loaded in the extension** (jetsam kills the process); the original "transcribe-in-extension" spike is abandoned. History browse/insert is kept as a secondary panel. See §4e.
 - **D6 [Done]. Auto-copy to clipboard** after transcription — toggle in settings.
 - **D7 [Done]. Recording rules**: no minimum duration (a 1 s clip may come back empty — acceptable); **maximum recording duration 10 minutes** (auto-stops); **single-flight processing lock** (never two transcriptions at once; recording is blocked while one runs). Audio-session interruptions (calls/Siri) stop the recording and transcribe what was captured. Local patch for bug #1 (short-clip hallucination) kept until the upstream fix lands.
 - **D8 [Done]. Target**: minimum **iOS 18.0** (current public iOS is 26.6, headroom is fine).
@@ -75,8 +75,8 @@ openWhisper.xcodeproj
 ├── OpenWhisperShared (local SPM package)   — AppGroup, ModelLocations, TranscriptionItem, Language
 └── Packages/parakeet-coreml-swift (vendored)
 
-Planned (not built yet):
-└── OpenWhisperKeyboard — keyboard extension (Phase 1.5)
+Planned (redesign, Phase 1.5):
+└── OpenWhisperKeyboard — full keyboard + cloud dictation (OpenRouter) + history insert
 ```
 
 ### Flow: first launch
@@ -110,7 +110,7 @@ Native, minimal, premium. Black-on-white, standard iOS controls (`NavigationStac
 **Settings spec (current):**
 | Section | Row / control | Behavior |
 |---|---|---|
-| Model | `ModelCardView` | Shows the model state machine: not downloaded → downloading (progress) → ready ("Saved on this device") → failed ("Try Again"); Re-download action; compute units picker (ANE / GPU / CPU / All) with a hardware description footer |
+| Model | `ModelCardView` | Shows the model state machine: not downloaded → downloading (progress) → ready ("Saved on this device") → failed ("Try Again"); Re-download action; compute units picker (GPU / CPU — ANE/All supported internally, not exposed) with a hardware description footer |
 | Model | Blocked transcription | If the model is missing (e.g. onboarding skipped): "Transcription not supported — download the model in Settings" (badge + disabled record control) |
 | Recording | Auto-copy to clipboard | Toggle, default ON |
 | Recording | Max recording duration | Informational (fixed 10 min) |
@@ -190,6 +190,67 @@ Transcript: <text>
 
 **Degradation:** a bad prompt can hurt accuracy — so prompt-derived terms are capped (e.g. ≤ 20 terms) and only enabled when the user provides context.
 
+### §4e. Keyboard extension with cloud dictation (Phase 1.5) — plan
+
+**Context.** The original keyboard plan (D5) was history-only, with a feasibility spike to transcribe inside the extension using the ~480 MB model. That spike is abandoned: loading the model in a keyboard extension's memory budget crashes the process (jetsam). The new direction ships a **real keyboard** (typing) with **cloud dictation**: record a short clip → transcribe via an external STT provider → insert text into the active field.
+
+**Provider (verified).** OpenRouter, model `nvidia/parakeet-tdt-0.6b-v3` (confirmed in OpenRouter's STT catalog — `output_modalities: transcription`, ~$0.0015/minute).
+
+- Endpoint: `POST https://openrouter.ai/api/v1/audio/transcriptions`
+- Auth: `Authorization: Bearer <OPENROUTER_API_KEY>`, `Content-Type: application/json`
+- Body (JSON, base64 audio): `{ "model": "nvidia/parakeet-tdt-0.6b-v3", "input_audio": { "data": "<base64 wav>", "format": "wav" }, "language": "<ISO-639-1, optional>" }`
+- Response: `{ "text": "…", "usage": { "seconds": …, "total_tokens": …, "input_tokens": …, "output_tokens": …, "cost": … } }`
+- OpenAI-compatible `multipart/form-data` also works (base URL `https://openrouter.ai/api/v1`); multipart cap 25 MB.
+- Upstream provider processing timeout ≈ 60 s → **hard cap dictation at 60 s** (auto-stop).
+- Optional attribution headers: `HTTP-Referer`, `X-OpenRouter-Title`.
+
+**Decisions.**
+- **DD1 — No model in the extension.** Dictation = record (16 kHz mono Float32) → pad → base64 WAV → OpenRouter → insert. Retires risk #1 and the D5 spike.
+- **DD1a — 60 s cap + silence padding.** Keyboard dictations hard-cap at **60 s** (auto-stop). Before sending, apply the **same padding the local model uses** (`ParakeetTranscriber.prepareAudio`: **0.5 s lead-in**, **1.5 s trailing silence**, pad to **min 5 s** total) — it measurably improved local transcription quality. Extract the constants into a shared `SilencePadding` helper so both paths stay consistent.
+- **DD2 — BYOK first, subscription later.** The user pastes an OpenRouter API key in app Settings, stored in the **Keychain** shared via app-group keychain sharing (readable by the extension). Gate flag `keyboardDictationEnabled` is the placeholder for the future paid subscription. Local app dictation + notepad stay **always free**.
+- **DD3 — Single shared lightweight package; zero duplication.** All code used by both app and keyboard lives **only** in `OpenWhisperShared` (no copy-paste between targets): move `AudioCapturePipeline` (AVFoundation) + a `WaveformBars` pure function (port of `LiveWaveform.bars`) into it, add `OpenRouterSTTClient` (Foundation networking) + `SilencePadding`. After the `TranscriptionEngine` move (below), `OpenWhisperShared` depends on **system frameworks only** (Foundation, SwiftData, AVFoundation, Observation) — no third-party packages. Both app and keyboard link the same small shared framework; **nothing heavy is pulled into the extension**, so load stays fast. App-only (heavy/private): `ParakeetTDT` + `TranscriptionEngine` + model download/settings stay in the app target.
+- **DD4 — Language.** Pass the pinned `languageCode` (shared settings) as `language` when set; omit for auto-detection.
+- **DD5 — Monetization (future, M-K7).** Apple subscription via StoreKit (in-app purchase, Apple Pay):
+  - **Basic — $2.99/month**: keyboard cloud dictation with usage limits (e.g. minutes/day or message caps).
+  - **Pro — $4.99/month (max)**: unlimited / higher limits.
+  - Onboarding gains a **pricing step** (pricing table + benefits, e.g. "dictate anywhere", "no 480 MB download", "same Parakeet model"); Settings gets a subscription row. A paid tier is required because OpenRouter bills per minute. Later options to evaluate: our own backend API as a proxy, or a secure key-distribution mechanism without a backend intermediary.
+
+**New/changed files.**
+- `OpenWhisperShared/Sources/OpenWhisperShared/OpenRouterSTTClient.swift` — `Sendable` struct with stored `apiKey` + optional `language` (ISO-639-1): `transcribe(wavData:) async throws -> String`; base64 JSON request to `https://openrouter.ai/api/v1/audio/transcriptions`, model `nvidia/parakeet-tdt-0.6b-v3`, 65 s timeout; error mapping (400 bad request, 401/402/403 auth, 429 rate limit, other → server, plus network/invalidResponse/emptyTranscription); optional attribution headers (`HTTP-Referer`, `X-OpenRouter-Title`).
+- `OpenWhisperShared/Sources/OpenWhisperShared/SilencePadding.swift` — shared constants + helper mirroring `ParakeetTranscriber.prepareAudio` (0.5 s lead, 1.5 s trail, min 5 s).
+- `OpenWhisperShared/Sources/OpenWhisperShared/WaveformBars.swift` — pure `bars(from:count:)` used by `LiveWaveform` (SwiftUI) and the extension's `WaveformView` (UIKit).
+- `OpenWhisperShared` shared settings keys — `cloudApiKey` + `keyboardDictationEnabled` (extend `AppGroup`). **M-K1 adds the shared key names only**; actual Keychain storage + keychain-sharing entitlement land in M-K2 (Settings phase).
+- `openWhisper/Services/Transcription/TranscriptionEngine.swift` — **moved from shared** into the app target (only used by `TranscriptionService`); `OpenWhisperShared/Package.swift` drops the `ParakeetTDT` dependency.
+- `openWhisper/Views/Settings/SettingsKeyboardSection.swift` — secure API key field, enable toggle, privacy note ("audio is sent to your chosen provider"), link to OpenRouter keys page; later a subscription row (DD5).
+- `OpenWhisperKeyboard/KeyboardViewController.swift` — rewrite (UI below).
+- `OpenWhisperKeyboard/WaveformView.swift` — UIKit bars view (uses shared `WaveformBars`).
+- `OpenWhisperKeyboard/KeyboardEngine.swift` — key layout + action model (typing page, symbols page).
+- `OpenWhisperKeyboard/DictationController.swift` — records via the shared pipeline, live samples → bars, stop (≤60 s, padded) → `OpenRouterSTTClient` → `textDocumentProxy.insertText`.
+
+**Keyboard UI (UIKit, `UIInputViewController`).**
+- Top bar: globe (keyboard switching via `handleInputModeList`), title/status, mode toggle (typing ⇄ history), mic button.
+- Typing: 3 QWERTY rows + shift; bottom row: globe · [123] · space · return · backspace. Symbols page ([123→ABC]).
+- Dictating: replaces the keyboard area with a live waveform + elapsed time + red stop + cancel (✕); auto-stop at 60 s; on stop → "Transcribing…" spinner → insert text → back to typing.
+- History: recent transcriptions list (SwiftData, shared store), tap to insert, back button (kept from the current build).
+- States: no API key → mic disabled + "Set your API key in OpenWhisper"; no subscription entitlement (later) → paywall hint; no network → inline error (typed text preserved); empty/short result → ignore; extension suspended mid-record → stop and send.
+
+**Milestones.**
+1. **M-K1** — Shared plumbing: move audio capture + waveform bars + `SilencePadding` to shared; `OpenRouterSTTClient`; **move `TranscriptionEngine` to the app target; drop `ParakeetTDT` from `OpenWhisperShared`**; shared settings/Keychain keys. App regression check.
+2. **M-K2** — Settings UI (Keychain API key + enable toggle + privacy copy).
+3. **M-K3** — Keyboard typing mode (QWERTY + actions) — usable end-to-end without dictation.
+4. **M-K4** — Dictation: mic → waveform → 60 s cap + padding → STT → insert; `NSMicrophoneUsageDescription` in the extension Info.plist; permission flow.
+5. **M-K5** — History panel (keep browse/insert).
+6. **M-K6** — Hardening: 60 s cap, error/offline/no-key UX, extension lifecycle (suspend → abort & send), iPhone/iPad layout, haptics.
+7. **M-K7** — (future) Subscription (DD5): StoreKit tiers ($2.99 Basic w/ limits, $4.99 Pro), onboarding pricing step, Settings subscription row, entitlement gating.
+
+**Risks / open questions.**
+- Resolved: API key → **Keychain** (app-group sharing). Extension model code → **removed** (`TranscriptionEngine` moves to app target; `OpenWhisperShared` drops `ParakeetTDT`).
+- Provider 60 s processing timeout → 60 s dictation cap + short clips; verify latency on device.
+- Recording inside an extension must be validated on a physical device (mic permission + `AVAudioSession` in extension context; simulator unreliable).
+- App Store: keyboard extensions that record + network need the mic usage string and review-safe copy; subscription review requirements (M-K7).
+- Privacy: keyboard dictation sends audio to the provider — must be transparent (the app-level model stays local/private).
+- Future: own backend API or backend-less secure key distribution (evaluate at M-K7, before shipping paid tiers).
+
 ---
 
 ## 5. Phases & milestones
@@ -197,9 +258,9 @@ Transcript: <text>
 | Phase | Status | Scope | Definition of done |
 |---|---|---|---|
 | **M0 — Spike** | **Done** | Package integrated (vendored), model download + transcription verified on a physical iPhone, audio pipeline fixed (WAV write via `.inputRanDry`) | Transcription works on device (incl. Polish) |
-| **M1 — MVP app** | **Done** | Onboarding (3 steps, skip, video/screenshot placeholders, background download, resume/fail states); recording → transcription; history (SwiftData); delete / clear / copy; auto-copy; Settings (ModelCardView, compute units, save-to-history, language picker); reusable components; clean file structure | Full cycle working on device |
+| **M1 — MVP app** | **Done** | Onboarding (3 steps, skip, video/screenshot placeholders, background download, resume/fail states); recording → transcription; history (SwiftData); delete / copy; auto-copy; Settings (ModelCardView, compute units, save-to-history, language picker); reusable components; clean file structure | Full cycle working on device |
 | **M2 — App Group** | **Done** | Shared App Group container (`group.piszeprogramy.openWhisper`); model cache + SwiftData store moved; `OpenWhisperShared` package extracted | Store and model cache live in the group container (verified on simulator) |
-| **Phase 1.5 — Keyboard** | Planned | `OpenWhisperKeyboard`: recent transcriptions, insert into active field; spike: transcription inside the extension (ANE memory feasibility) | Works in any app with text input; feasibility report |
+| **Phase 1.5 — Keyboard** | Planned | `OpenWhisperKeyboard` (redesign, §4e): full QWERTY keyboard + **cloud dictation** via OpenRouter `nvidia/parakeet-tdt-0.6b-v3` + history insert panel; `OpenRouterSTTClient` + shared audio/waveform in `OpenWhisperShared`; API key in Settings; mic permission | Works in any app with text input; dictation inserts text without loading the model in-extension |
 | **M4 — Release** | Planned | App icon, Polish/English UI, real video/screenshot assets, on-device testing, privacy policy, App Store (free) | App in review / on the store |
 | **Phase 2 — Notepad** | Planned | Separate spec (TBD): notepad + LLM for on-the-fly transcription correction. **Extends to dictation quality:** if the corrections dictionary (D13) + LLM correction aren't enough for mixed-language / code-switched words, add **CTC vocabulary boosting** (context biasing): download a separate ~110M CTC keyword-spotter model (à la TypeWhisper's Parakeet plugin) and port `CtcKeywordSpotter` + `VocabularyRescorer` into the vendored decoder to bias it toward user dictionary terms. Stacked on top of D13 — the two compose (boost during decode, corrections on text after) | — |
 
@@ -207,7 +268,7 @@ Transcript: <text>
 
 ## 6. Risks & mitigations
 
-1. **Memory in the keyboard extension** (~480 MB model vs extension budget) — Phase 1.5 spike decides; the extension may only read history.
+1. **Memory in the keyboard extension** — resolved by design: the ~480 MB model is never loaded in the extension. Dictation uses the external provider. The extension only records short clips (16 kHz mono buffer) and makes a network request; keep buffers small and cap recording length (jetsam safety + provider 60 s processing timeout).
 2. **Short-clip bug (issue #1)** — empty result for very short clips is acceptable; hallucinated tail on 2–5 s clips mitigated by a local patch/fork until the upstream fix lands (we control the vendored copy).
 3. **480 MB download** — progress UI, resumability, cache in Application Support (non-purgeable). After an app reinstall the model must be re-downloaded (no sandbox location survives deletion) — documented in the UI.
 4. **Disk usage** — sources are kept (`deleteSourceAfterCompile: false`): ~1.1–1.3 GB after download + compile. Acceptable for MVP; can be optimized later.
@@ -230,7 +291,7 @@ Resolved:
 1. Name: **OpenWhisper** (no typo); repo folder stays `openWhisper`.
 2. Minimum iOS: **18.0**.
 3. Storage: **local-only** (no cloud) — Application Support; data does not survive app deletion (accepted).
-4. Transcription in the keyboard extension: **Phase 1.5** — spike + feasibility decides shipping.
+4. Keyboard dictation: **external provider** (OpenRouter `nvidia/parakeet-tdt-0.6b-v3`) — the ~480 MB model is never loaded in the extension; recording + cloud transcription in-extension (no feasibility spike needed).
 5. UI languages: **Polish + English** for now; all languages planned later.
 6. App Store regions: **Global distribution** — EU, USA, UK (excluding India, Asia, Africa, South America).
 7. Onboarding: 3 steps (Intro / Model / Privacy) with video + screenshot placeholders.
