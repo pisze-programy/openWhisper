@@ -15,8 +15,8 @@ public enum TranscriptionStyle: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .formal: return "Formal"
         case .casual: return "Casual"
-        case .veryCasual: return "Very Casual"
-        case .excited: return "Excited"
+        case .veryCasual: return "Minimal"
+        case .excited: return "Brief"
         }
     }
 
@@ -24,8 +24,8 @@ public enum TranscriptionStyle: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .formal: return "textformat"
         case .casual: return "bubble.left"
-        case .veryCasual: return "ellipsis.message"
-        case .excited: return "bolt.fill"
+        case .veryCasual: return "scissors"
+        case .excited: return "list.bullet"
         }
     }
 }
