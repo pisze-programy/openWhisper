@@ -1,19 +1,25 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct OnboardingIntroView: View {
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "waveform")
-                .font(.system(size: 44, weight: .medium))
-                .foregroundStyle(.tint)
-                .padding(.top, 24)
+            ZStack {
+                Circle()
+                    .fill(AppTheme.surface)
+                    .frame(width: 96, height: 96)
+                Image(systemName: "waveform")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(AppTheme.accent)
+            }
+            .padding(.top, 24)
 
             Text("OpenWhisper")
                 .font(.largeTitle.bold())
 
             Text("Turn your speech into text on your device.")
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AppTheme.secondaryLabel)
                 .multilineTextAlignment(.center)
 
             GlassCard {

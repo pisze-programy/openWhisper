@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import OpenWhisperShared
 
 struct OnboardingView: View {
     var onFinish: () -> Void

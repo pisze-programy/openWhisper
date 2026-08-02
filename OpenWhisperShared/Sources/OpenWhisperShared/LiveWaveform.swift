@@ -13,7 +13,7 @@ public struct LiveWaveform: View {
             HStack(alignment: .center, spacing: 3) {
                 ForEach(0..<bars.count, id: \.self) { i in
                     Capsule()
-                        .fill(Color.accentColor.opacity(0.75))
+                        .fill(AppTheme.accent.opacity(0.75))
                         .frame(width: 4, height: bars[i])
                 }
             }

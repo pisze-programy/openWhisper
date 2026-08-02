@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 extension View {
     @ViewBuilder
@@ -10,7 +11,7 @@ extension View {
             )
         } else {
             self.background(
-                .ultraThinMaterial,
+                AppTheme.surface,
                 in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             )
         }

@@ -1,20 +1,21 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct VideoPlaceholder: View {
     let caption: String
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(Color.black)
+        RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius, style: .continuous)
+            .fill(.quaternary)
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .overlay {
                 VStack(spacing: 8) {
                     Image(systemName: "play.circle.fill")
                         .font(.system(size: 44))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(AppTheme.accent)
                     Text(caption)
                         .font(.footnote)
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(AppTheme.secondaryLabel)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                 }
