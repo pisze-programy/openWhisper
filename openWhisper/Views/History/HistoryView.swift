@@ -265,15 +265,17 @@ struct HistoryView: View {
         guard recorder.isRecording, !transcription.isTranscribing, !isHandlingRecording else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         isHandlingRecording = true
-        do {
-            let url = try recorder.stop()
-            Task { @MainActor in
+        Task { @MainActor in
+            do {
+                // Keep the mic capturing for ~1s after release so the end of the
+                // user's speech isn't cut off; then finalise and transcribe.
+                let url = try await recorder.stopAfterTail(1.0)
                 await transcribe(url: url)
                 isHandlingRecording = false
+            } catch {
+                isHandlingRecording = false
+                present(error)
             }
-        } catch {
-            isHandlingRecording = false
-            present(error)
         }
     }
 

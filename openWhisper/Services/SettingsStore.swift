@@ -49,6 +49,15 @@ final class SettingsStore {
         }
     }
 
+    /// Microphone gain applied to recordings (1...10). The `.measurement` audio
+    /// mode has no auto-gain, so quiet microphones need a boost for the STT to
+    /// hear normal speech. Default 5.0 ("Optimal").
+    var micGain: Double {
+        didSet {
+            UserDefaults.standard.set(micGain, forKey: "settings.micGain")
+        }
+    }
+
     var onboardingCompleted: Bool {
         didSet {
             UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
@@ -65,6 +74,11 @@ final class SettingsStore {
     /// App-side read of the silence timeout in seconds (default 5).
     static var silenceAutoStopSeconds: Double {
         UserDefaults.standard.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
+    }
+
+    /// App-side read of the microphone gain (1...10, default 5 = "Optimal").
+    static var sharedMicGain: Double {
+        UserDefaults.standard.object(forKey: "settings.micGain") as? Double ?? 5.0
     }
 
     init() {
@@ -92,5 +106,6 @@ final class SettingsStore {
         onboardingCompleted = defaults.object(forKey: "settings.onboardingCompleted") as? Bool ?? false
         autoStopOnSilence = defaults.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
         autoStopSilenceSeconds = defaults.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
+        micGain = defaults.object(forKey: "settings.micGain") as? Double ?? 5.0
     }
 }

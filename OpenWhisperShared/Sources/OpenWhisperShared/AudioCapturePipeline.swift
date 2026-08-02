@@ -21,6 +21,12 @@ nonisolated public final class AudioCapturePipeline {
     /// RMS below this is treated as silence (raw amplitude, ~ room noise).
     public var silenceRMSThreshold: Float = 0.02
 
+    /// Linear gain applied to captured samples before writing to the file.
+    /// The `.measurement` audio mode gives a flat mic response with no AGC, so
+    /// normal speech can sit well below the silence threshold — gain brings it
+    /// up (and the silenced detector reads the gained samples too).
+    public var inputGain: Float = 1.0
+
     public var liveSamples: [Float] {
         samplesLock.lock()
         defer { samplesLock.unlock() }
@@ -104,6 +110,15 @@ nonisolated public final class AudioCapturePipeline {
 
         let hasOutput = status == .haveData || status == .inputRanDry
         if hasOutput, conversionError == nil, converted.frameLength > 0 {
+            if inputGain != 1.0, let ch = converted.floatChannelData {
+                let gain = inputGain
+                let count = Int(converted.frameLength)
+                let ptr = ch[0]
+                for i in 0..<count {
+                    let v = ptr[i] * gain
+                    ptr[i] = max(-1.0, min(1.0, v))
+                }
+            }
             try? outputFile.write(from: converted)
             if let ch = converted.floatChannelData {
                 let count = Int(converted.frameLength)

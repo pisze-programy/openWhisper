@@ -53,10 +53,6 @@ final class TranscriptionService {
     }
 
     func enterBackground() {
-
-        if UserDefaults(suiteName: AppGroup.identifier)?.object(forKey: "resident.enabled") as? Bool ?? true {
-            return
-        }
         guard !isWarmingUp, !isTranscribing else { return }
         engine.release()
         isModelReady = false

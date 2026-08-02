@@ -32,7 +32,7 @@ final class AudioRecorder {
             fileURL = nil
         }
         elapsed = 0
-        startDate = nil
+        startDate = Date()
 
         let granted = await AVAudioApplication.requestRecordPermission()
         guard granted else {
@@ -53,6 +53,10 @@ final class AudioRecorder {
         } else {
             pipeline.silenceAutoStopSeconds = nil
         }
+        // The `.measurement` mode has no AGC — boost the flat mic level so
+        // normal speech clears the silence threshold and the STT gets a loud
+        // recording. User-adjustable in Settings (default 5 = "Optimal").
+        pipeline.inputGain = Float(SettingsStore.sharedMicGain)
         pipeline.onSilenceThresholdExceeded = { [weak self] in
             // Callback runs on the audio thread — hop to the main actor.
             Task { @MainActor [weak self] in
@@ -83,6 +87,25 @@ final class AudioRecorder {
             isRecording = false
             restoreAudioSession()
         }
+        guard let fileURL else {
+            throw RecorderError.noRecording
+        }
+        return fileURL
+    }
+
+    /// Stops the recording **visually immediately**, but keeps the mic capturing
+    /// for `tail` seconds more so the end of the user's speech is not cut off
+    /// when they release the button. The file is then finalised and returned.
+    func stopAfterTail(_ tail: TimeInterval = 1.0) async throws -> URL {
+        guard isRecording else { throw RecorderError.noRecording }
+        // Immediate visual stop — the UI reflects "stopped" right away.
+        isRecording = false
+        stopTasks()
+        // Keep the pipeline (and the audio session) alive for the tail so the
+        // mic records the trailing speech into the same file.
+        try? await Task.sleep(nanoseconds: UInt64(tail * 1_000_000_000))
+        pipeline.stop()
+        restoreAudioSession()
         guard let fileURL else {
             throw RecorderError.noRecording
         }
