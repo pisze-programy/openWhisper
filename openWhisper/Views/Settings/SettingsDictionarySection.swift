@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct SettingsDictionarySection: View {
     @Environment(CorrectionsStore.self) private var corrections

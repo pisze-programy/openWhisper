@@ -1,26 +1,27 @@
 import Foundation
-import OpenWhisperShared
 
 /// Client for OpenRouter's chat completions endpoint, used to rewrite a finished
 /// transcript into the style chosen at recording time.
 ///
 /// Endpoint: POST https://openrouter.ai/api/v1/chat/completions
 /// Model:    openai/gpt-4o-mini  (fast, cheap, strong at text rewriting)
-struct OpenRouterFormattingClient: Sendable {
-    static let model = "openai/gpt-4o-mini"
-    static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
+public struct OpenRouterFormattingClient: Sendable {
+    public static let model = "openai/gpt-4o-mini"
+    public static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
 
-    let apiKey: String
-    let session: URLSession
+    public let apiKey: String
+    public let session: URLSession
 
-    init(apiKey: String, session: URLSession = .shared) {
+    public init(apiKey: String, session: URLSession = .shared) {
         self.apiKey = apiKey
         self.session = session
     }
 
     /// Sends the raw transcript to the model with the style's instruction and
-    /// returns the rewritten text.
-    func format(text: String, style: TranscriptionStyle) async throws -> String {
+    /// returns the rewritten text. The transcript is wrapped in an input
+    /// boundary so the model treats it as source text, and the response is
+    /// sanitized of any scaffold the model echoes back.
+    public func format(text: String, style: TranscriptionStyle) async throws -> String {
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -30,10 +31,10 @@ struct OpenRouterFormattingClient: Sendable {
         let body: [String: Any] = [
             "model": Self.model,
             "messages": [
-                ["role": "system", "content": Self.systemPrompt(style: style)],
-                ["role": "user", "content": text],
+                ["role": "system", "content": PromptComposer.formatPrompt(style: style)],
+                ["role": "user", "content": DictationInputBoundary.wrap(text)],
             ],
-            "temperature": 0.3,
+            "temperature": Self.temperature(for: style),
         ]
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -73,8 +74,11 @@ struct OpenRouterFormattingClient: Sendable {
                 let choices: [Choice]
             }
             let payload = try JSONDecoder().decode(Payload.self, from: data)
-            let result = payload.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let result, !result.isEmpty else { throw FormattingError.emptyResult }
+            guard let raw = payload.choices.first?.message.content else {
+                throw FormattingError.emptyResult
+            }
+            let result = DictationInputBoundary.sanitize(raw, originalText: text)
+            guard !result.isEmpty else { throw FormattingError.emptyResult }
             return result
         } catch let error as FormattingError {
             throw error
@@ -83,19 +87,15 @@ struct OpenRouterFormattingClient: Sendable {
         }
     }
 
-    /// A simple, task-specific instruction. The style's own instruction is
-    /// appended so every call is tailored to the selected style.
-    private static func systemPrompt(style: TranscriptionStyle) -> String {
-        """
-        You rewrite voice-to-text transcripts into clean, readable text. Follow the \
-        requested style. Fix obvious transcription errors using context, improve wording \
-        and flow, and structure the text into sentences and paragraphs. Never invent, add, \
-        remove, or change facts, names, numbers, or meaning. If the transcript is too \
-        garbled to understand, only fix punctuation and capitalization and return it \
-        otherwise unchanged. Output ONLY the finished text, no quotes, no commentary.
-
-        Style: \(FormattingPrompts.instruction(for: style))
-        """
+    /// Sampling temperature per style. Kept deterministic for structured
+    /// rewrites; a touch of variety for expressive styles.
+    private static func temperature(for style: TranscriptionStyle) -> Double {
+        switch style {
+        case .formal: return 0.2
+        case .casual: return 0.3
+        case .veryCasual: return 0.4
+        case .excited: return 0.4
+        }
     }
 
     private static func extractErrorMessage(from data: Data) -> String? {
@@ -112,7 +112,7 @@ struct OpenRouterFormattingClient: Sendable {
     }
 }
 
-enum FormattingError: LocalizedError, Sendable {
+public enum FormattingError: LocalizedError, Sendable {
     case authentication(message: String)
     case rateLimited(message: String)
     case server(statusCode: Int, message: String)
@@ -120,7 +120,7 @@ enum FormattingError: LocalizedError, Sendable {
     case network(message: String)
     case emptyResult
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .authentication(let message):
             return "OpenRouter rejected the API key: \(message)"

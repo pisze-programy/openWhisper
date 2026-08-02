@@ -2,11 +2,13 @@ import Foundation
 import Observation
 
 @MainActor @Observable
-final class ToastCenter {
-    private(set) var message: String?
+public final class ToastCenter {
+    public private(set) var message: String?
     private var hideTask: Task<Void, Never>?
 
-    func present(_ text: String) {
+    public init() {}
+
+    public func present(_ text: String) {
         message = text
         hideTask?.cancel()
         hideTask = Task { [weak self] in

@@ -3,11 +3,26 @@ import PackageDescription
 
 let package = Package(
     name: "OpenWhisperShared",
-    platforms: [.iOS("18.0")],
+    platforms: [.iOS("18.0"), .macOS("26.0")],
     products: [
         .library(name: "OpenWhisperShared", targets: ["OpenWhisperShared"])
     ],
+    dependencies: [
+        .package(path: "../Packages/parakeet-coreml-swift")
+    ],
     targets: [
-        .target(name: "OpenWhisperShared")
+        .target(
+            name: "OpenWhisperShared",
+            dependencies: [
+                .product(name: "ParakeetTDT", package: "parakeet-coreml-swift")
+            ],
+            resources: [
+                .copy("TextProcessing/PunctuationRules")
+            ]
+        ),
+        .testTarget(
+            name: "OpenWhisperSharedTests",
+            dependencies: ["OpenWhisperShared"]
+        )
     ]
 )

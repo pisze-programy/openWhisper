@@ -84,7 +84,7 @@ public struct RecordingSurface: View {
                         MicRecordButton(isRecording: true, size: buttonSize, action: onStop)
                         Button(action: onCancel) {
                             ZStack {
-                                if #available(iOS 26.0, *) {
+                                if #available(iOS 26.0, macOS 26.0, *) {
                                     Circle()
                                         .fill(.clear)
                                         .glassEffect(.regular, in: Circle())

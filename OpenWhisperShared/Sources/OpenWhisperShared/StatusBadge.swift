@@ -1,9 +1,13 @@
 import SwiftUI
 
-struct StatusBadge: View {
-    let status: ModelStatus
+public struct StatusBadge: View {
+    public let status: ModelStatus
 
-    var body: some View {
+    public init(status: ModelStatus) {
+        self.status = status
+    }
+
+    public var body: some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
             Text(label)

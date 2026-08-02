@@ -25,6 +25,8 @@ struct HistoryView: View {
     @State private var showSettings = false
     @State private var reformattingItemID: UUID?
 
+    private let pipeline = PostProcessingPipeline()
+
     private static let shortClipMaxDuration: TimeInterval = 1.0
     private static let confidenceGateThreshold: Float = 0.55
 
@@ -342,18 +344,33 @@ struct HistoryView: View {
                 toast.present("No speech detected")
                 return
             }
-            let text = TranscriptionValidator.cleanedText(corrections.apply(to: NumberNormalizer.normalize(SpeechPunctuation.normalize(result.text))))
+            let context = PostProcessingPipeline.Context(
+                languageCode: settings.languageCode,
+                engineId: "parakeet",
+                formattingStyle: settings.formattingStyle,
+                formattingEnabled: settings.formattingEnabled
+            )
+            let processed = try await pipeline.process(
+                text: result.text,
+                context: context,
+                corrections: corrections,
+                llmHandler: settings.formattingEnabled
+                    ? { [formatting, settings] text in
+                        await formatting.format(text: text, style: settings.formattingStyle)
+                    }
+                    : nil
+            )
+            let text = TranscriptionValidator.cleanedText(processed.text)
             guard TranscriptionValidator.isMeaningful(text) else {
                 try? FileManager.default.removeItem(at: url)
                 toast.present("No speech detected")
                 return
             }
-            let finalText = await applyFormatting(to: text)
             if settings.autoCopy {
-                ClipboardService.copy(finalText)
+                ClipboardService.copy(text)
             }
             if settings.saveToHistory {
-                let item = TranscriptionItem(text: finalText, duration: result.audioDuration, source: "mic")
+                let item = TranscriptionItem(text: text, duration: result.audioDuration, source: "mic")
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                     modelContext.insert(item)
                 }
@@ -371,11 +388,6 @@ struct HistoryView: View {
             present(error)
         }
         try? FileManager.default.removeItem(at: url)
-    }
-
-    private func applyFormatting(to text: String) async -> String {
-        guard settings.formattingEnabled else { return text }
-        return await formatting.format(text: text, style: settings.formattingStyle)
     }
 
     private func removeJunkEntries() {
@@ -443,7 +455,7 @@ struct HistoryView: View {
     private static func shouldPresentAsToast(_ error: Error) -> Bool {
         if let recorderError = error as? RecorderError {
             switch recorderError {
-            case .alreadyRecording, .noRecording, .formatUnavailable:
+            case .alreadyRecording, .noRecording, .formatUnavailable, .engineError:
                 return true
             case .permissionDenied:
                 return false

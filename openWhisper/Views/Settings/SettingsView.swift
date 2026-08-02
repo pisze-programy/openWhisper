@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import OpenWhisperShared
 
 struct SettingsView: View {
     @Environment(SettingsStore.self) private var settingsStore
@@ -65,6 +66,10 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+
+                    ToggleRow(title: "Whisper Mode (auto gain)", isOn: $settings.microphoneBoostEnabled)
+
+                    ToggleRow(title: "Keep short or quiet clips", isOn: $settings.transcribeShortQuietClipsAggressively)
                 } header: {
                     SectionHeader(title: "Recording")
                 }

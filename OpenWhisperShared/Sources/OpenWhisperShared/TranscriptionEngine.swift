@@ -1,26 +1,25 @@
 import Foundation
 import ParakeetTDT
-import OpenWhisperShared
 
-nonisolated final class TranscriptionEngine: @unchecked Sendable {
+nonisolated public final class TranscriptionEngine: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.openwhisper.transcribe")
     private var transcriber: ParakeetTranscriber?
     private var currentComputeUnits: ParakeetComputeUnits?
 
-    init() {}
+    public init() {}
 
-    func prepare(computeUnits: ParakeetComputeUnits) throws {
+    public func prepare(computeUnits: ParakeetComputeUnits) throws {
         try queue.sync { _ = try makeTranscriber(computeUnits: computeUnits) }
     }
 
-    func release() {
+    public func release() {
         queue.sync {
             transcriber = nil
             currentComputeUnits = nil
         }
     }
 
-    func transcribe(audioURL: URL, computeUnits: ParakeetComputeUnits) throws -> Transcription {
+    public func transcribe(audioURL: URL, computeUnits: ParakeetComputeUnits) throws -> Transcription {
         let samples: [Float]
         do {
             samples = try AudioLoader.loadMono16k(at: audioURL)
@@ -28,10 +27,11 @@ nonisolated final class TranscriptionEngine: @unchecked Sendable {
 
             throw Self.map(error)
         }
-        return try transcribe(samples: samples, computeUnits: computeUnits)
+        // Tail-silence padding stabilizes short clips on both platforms.
+        return try transcribe(samples: SilencePadder.pad(samples), computeUnits: computeUnits)
     }
 
-    func transcribe(samples: [Float], computeUnits: ParakeetComputeUnits) throws -> Transcription {
+    public func transcribe(samples: [Float], computeUnits: ParakeetComputeUnits) throws -> Transcription {
         let normalized = AudioNormalizer.process(samples)
         do {
             return try queue.sync {

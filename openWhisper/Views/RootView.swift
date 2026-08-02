@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase

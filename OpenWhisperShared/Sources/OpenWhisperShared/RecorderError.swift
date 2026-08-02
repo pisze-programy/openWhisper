@@ -5,6 +5,7 @@ public enum RecorderError: LocalizedError {
     case formatUnavailable
     case noRecording
     case alreadyRecording
+    case engineError(String)
 
     public var errorDescription: String? {
         switch self {
@@ -16,6 +17,8 @@ public enum RecorderError: LocalizedError {
             return "There is no recording to stop."
         case .alreadyRecording:
             return "A recording is already in progress."
+        case .engineError(let message):
+            return "The audio engine failed: \(message)"
         }
     }
 }

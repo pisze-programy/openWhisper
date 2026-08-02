@@ -1,0 +1,18 @@
+{
+  "language": "en",
+  "rules": [
+    { "phrase": "question mark", "replacement": "?", "category": "punctuation" },
+    { "phrase": "exclamation mark", "replacement": "!", "category": "punctuation" },
+    { "phrase": "full stop", "replacement": ".", "category": "punctuation" },
+    { "phrase": "period", "replacement": ".", "category": "punctuation" },
+    { "phrase": "comma", "replacement": ",", "category": "punctuation" },
+    { "phrase": "colon", "replacement": ":", "category": "punctuation" },
+    { "phrase": "semicolon", "replacement": ";", "category": "punctuation" },
+    { "phrase": "open parenthesis", "replacement": "(", "category": "brackets" },
+    { "phrase": "close parenthesis", "replacement": ")", "category": "brackets" },
+    { "phrase": "open bracket", "replacement": "(", "category": "brackets" },
+    { "phrase": "close bracket", "replacement": ")", "category": "brackets" },
+    { "phrase": "open quote", "replacement": "\u201C", "category": "quotes" },
+    { "phrase": "close quote", "replacement": "\u201D", "category": "quotes" }
+  ]
+}

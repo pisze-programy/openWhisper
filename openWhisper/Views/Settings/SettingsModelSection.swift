@@ -1,5 +1,6 @@
 import SwiftUI
 import ParakeetTDT
+import OpenWhisperShared
 
 struct SettingsModelSection: View {
     @Environment(SettingsStore.self) private var settingsStore

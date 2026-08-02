@@ -1,30 +1,31 @@
 import Foundation
 import ParakeetTDT
-import OpenWhisperShared
 
 @MainActor @Observable
-final class ModelDownloadManager {
-    static let shared = ModelDownloadManager()
+public final class ModelDownloadManager: ModelProviding {
+    public static let shared = ModelDownloadManager()
 
-    static let minRequiredFreeSpaceGB: Double = 1.3
+    public static let minRequiredFreeSpaceGB: Double = 1.3
 
-    private(set) var status: ModelStatus = .notDownloaded
-    private(set) var availableFreeSpaceGB: Double?
+    public private(set) var status: ModelStatus = .notDownloaded
+    public private(set) var availableFreeSpaceGB: Double?
 
-    var isReady: Bool { status == .ready }
+    public var isReady: Bool { status == .ready }
 
-    var isLowOnSpace: Bool {
+    public var isLowOnSpace: Bool {
         guard let availableFreeSpaceGB else { return false }
         return availableFreeSpaceGB < Self.minRequiredFreeSpaceGB
     }
 
-    func refreshStatus() {
+    public init() {}
+
+    public func refreshStatus() {
         refreshAvailableSpace()
         guard status == .notDownloaded || status == .ready else { return }
         status = ModelLocations.isDownloaded ? .ready : .notDownloaded
     }
 
-    func refreshAvailableSpace() {
+    public func refreshAvailableSpace() {
         let url = ModelLocations.hfModelsDirectory
         if let capacity = try? url.resourceValues(
             forKeys: [.volumeAvailableCapacityForImportantUsageKey]
@@ -35,7 +36,7 @@ final class ModelDownloadManager {
         }
     }
 
-    func startDownload(force: Bool = false) async {
+    public func startDownload(force: Bool = false) async {
         if case .downloading = status { return }
         if status == .ready && !force { return }
 

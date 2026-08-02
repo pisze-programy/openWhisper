@@ -1,0 +1,16 @@
+{
+  "language": "pl",
+  "rules": [
+    { "phrase": "znak zapytania", "replacement": "?", "category": "punctuation" },
+    { "phrase": "pytajnik", "replacement": "?", "category": "punctuation" },
+    { "phrase": "wykrzyknik", "replacement": "!", "category": "punctuation" },
+    { "phrase": "kropka", "replacement": ".", "category": "punctuation" },
+    { "phrase": "przecinek", "replacement": ",", "category": "punctuation" },
+    { "phrase": "dwukropek", "replacement": ":", "category": "punctuation" },
+    { "phrase": "średnik", "replacement": ";", "category": "punctuation" },
+    { "phrase": "otwórz nawias", "replacement": "(", "category": "brackets" },
+    { "phrase": "zamknij nawias", "replacement": ")", "category": "brackets" },
+    { "phrase": "otwórz cudzysłów", "replacement": "\u201E", "category": "quotes" },
+    { "phrase": "zamknij cudzysłów", "replacement": "\u201D", "category": "quotes" }
+  ]
+}

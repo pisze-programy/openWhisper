@@ -27,7 +27,7 @@ public struct MicRecordButton: View {
                         .fill(AnyShapeStyle(AppTheme.destructive))
                         .frame(width: size, height: size)
                         .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
-                } else if #available(iOS 26.0, *) {
+                } else if #available(iOS 26.0, macOS 26.0, *) {
 
                     Circle()
                         .fill(.clear)

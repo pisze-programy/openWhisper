@@ -1,6 +1,6 @@
 import Foundation
 
-enum ModelStatus: Equatable {
+public enum ModelStatus: Equatable {
     case notDownloaded
     case downloading(progress: Double)
     case ready

@@ -1,4 +1,5 @@
 import Foundation
+#if os(iOS)
 import ActivityKit
 
 public struct DictationActivityAttributes: ActivityAttributes {
@@ -21,3 +22,4 @@ public struct DictationActivityAttributes: ActivityAttributes {
 
     public init() {}
 }
+#endif

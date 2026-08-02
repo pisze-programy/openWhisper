@@ -1,9 +1,13 @@
 import SwiftUI
 
-struct SectionHeader: View {
-    let title: String
+public struct SectionHeader: View {
+    public let title: String
 
-    var body: some View {
+    public init(title: String) {
+        self.title = title
+    }
+
+    public var body: some View {
         Text(title)
             .font(.footnote.weight(.semibold))
             .textCase(.uppercase)

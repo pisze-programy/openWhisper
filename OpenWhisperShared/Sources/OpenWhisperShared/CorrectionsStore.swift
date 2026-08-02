@@ -1,20 +1,20 @@
 import Foundation
 import Observation
 
-struct Correction: Identifiable, Codable, Equatable {
-    let id: UUID
-    var wrong: String
-    var correct: String
-    var caseSensitive: Bool = false
+public struct Correction: Identifiable, Codable, Equatable {
+    public let id: UUID
+    public var wrong: String
+    public var correct: String
+    public var caseSensitive: Bool = false
 
-    init(id: UUID, wrong: String, correct: String, caseSensitive: Bool = false) {
+    public init(id: UUID, wrong: String, correct: String, caseSensitive: Bool = false) {
         self.id = id
         self.wrong = wrong
         self.correct = correct
         self.caseSensitive = caseSensitive
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         wrong = try container.decode(String.self, forKey: .wrong)
@@ -24,20 +24,20 @@ struct Correction: Identifiable, Codable, Equatable {
 }
 
 @MainActor @Observable
-final class CorrectionsStore {
-    private(set) var corrections: [Correction] = []
+public final class CorrectionsStore {
+    public private(set) var corrections: [Correction] = []
 
     private let defaults = UserDefaults.standard
     private let key = "settings.corrections"
 
-    init() {
+    public init() {
         if let data = defaults.data(forKey: key),
            let decoded = try? JSONDecoder().decode([Correction].self, from: data) {
             corrections = decoded
         }
     }
 
-    func add(wrong: String, correct: String, caseSensitive: Bool = false) {
+    public func add(wrong: String, correct: String, caseSensitive: Bool = false) {
         let trimmedWrong = wrong.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedCorrect = correct.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedWrong.isEmpty, !trimmedCorrect.isEmpty else { return }
@@ -45,12 +45,12 @@ final class CorrectionsStore {
         persist()
     }
 
-    func remove(_ correction: Correction) {
+    public func remove(_ correction: Correction) {
         corrections.removeAll { $0.id == correction.id }
         persist()
     }
 
-    func apply(to text: String) -> String {
+    public func apply(to text: String) -> String {
         var result = text
         for correction in corrections {
             let pattern = "\\b" + NSRegularExpression.escapedPattern(for: correction.wrong) + "\\b"

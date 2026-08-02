@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenWhisperShared
 
 struct ToastOverlay: View {
     @Environment(ToastCenter.self) private var toast
