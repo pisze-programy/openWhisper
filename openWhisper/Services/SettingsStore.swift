@@ -58,6 +58,21 @@ final class SettingsStore {
         }
     }
 
+    /// Whether finished transcripts are rewritten by the AI formatting step.
+    var formattingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(formattingEnabled, forKey: "settings.formattingEnabled")
+        }
+    }
+
+    /// Style applied to new transcriptions. Chosen at recording time; persisted
+    /// here so the picker remembers the last selection.
+    var formattingStyle: TranscriptionStyle {
+        didSet {
+            UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
+        }
+    }
+
     var onboardingCompleted: Bool {
         didSet {
             UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
@@ -107,5 +122,8 @@ final class SettingsStore {
         autoStopOnSilence = defaults.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
         autoStopSilenceSeconds = defaults.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
         micGain = defaults.object(forKey: "settings.micGain") as? Double ?? 5.0
+        formattingEnabled = defaults.object(forKey: "settings.formattingEnabled") as? Bool ?? true
+        let styleRaw = defaults.string(forKey: "settings.formattingStyle")
+        formattingStyle = styleRaw.flatMap(TranscriptionStyle.init(rawValue:)) ?? .casual
     }
 }

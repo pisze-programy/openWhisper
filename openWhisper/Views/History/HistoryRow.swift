@@ -8,6 +8,8 @@ struct HistoryRow: View {
     let item: TranscriptionItem
     var onCopy: () -> Void
     var onDelete: () -> Void
+    var onReformat: (() -> Void)? = nil
+    var isReformatting: Bool = false
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -22,9 +24,15 @@ struct HistoryRow: View {
                 }
                 .frame(width: 44, alignment: .trailing)
 
-                Text(item.text)
-                    .font(.body)
-                    .textSelection(.enabled)
+                if isReformatting {
+                    TextShimmerPlaceholder()
+                        .transition(.opacity)
+                } else {
+                    Text(item.text)
+                        .font(.body)
+                        .textSelection(.enabled)
+                        .transition(.opacity)
+                }
 
                 Spacer(minLength: 0)
             }
@@ -38,6 +46,13 @@ struct HistoryRow: View {
                 } label: {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
+                if let onReformat {
+                    Button {
+                        onReformat()
+                    } label: {
+                        Label("Rewrite with AI", systemImage: "wand.and.stars")
+                    }
+                }
                 Button(role: .destructive) {
                     onDelete()
                 } label: {
@@ -49,6 +64,7 @@ struct HistoryRow: View {
             TimelineDot(style: .note)
                 .padding(.leading, 11.5)
         }
+        .animation(.easeInOut(duration: 0.25), value: isReformatting)
     }
 }
 

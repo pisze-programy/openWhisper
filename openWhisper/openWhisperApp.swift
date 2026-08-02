@@ -11,6 +11,7 @@ struct openWhisperApp: App {
     @State private var toast = ToastCenter()
     @State private var corrections = CorrectionsStore()
     @State private var settingsRouter = SettingsRouter()
+    @State private var formatting = TextFormattingService()
     private let container: ModelContainer
 
     init() {
@@ -41,6 +42,7 @@ struct openWhisperApp: App {
         .environment(toast)
         .environment(corrections)
         .environment(settingsRouter)
+        .environment(formatting)
         .modelContainer(container)
     }
 }

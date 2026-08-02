@@ -12,6 +12,7 @@ struct HistoryView: View {
     @Environment(ToastCenter.self) private var toast
     @Environment(CorrectionsStore.self) private var corrections
     @Environment(SettingsRouter.self) private var settingsRouter
+    @Environment(TextFormattingService.self) private var formatting
 
     @Query(sort: \TranscriptionItem.createdAt, order: .reverse)
     private var items: [TranscriptionItem]
@@ -22,6 +23,7 @@ struct HistoryView: View {
     @State private var errorMessage = ""
     @State private var isHandlingRecording = false
     @State private var showSettings = false
+    @State private var reformattingItemID: UUID?
 
     private static let shortClipMaxDuration: TimeInterval = 1.0
     private static let confidenceGateThreshold: Float = 0.55
@@ -100,12 +102,16 @@ struct HistoryView: View {
                     ForEach(sections, id: \.day) { section in
                         dayHeader(section.day)
                         ForEach(section.items) { item in
-                            HistoryRow(item: item) {
-                                copy(item)
-                            } onDelete: {
-                                itemPendingDelete = item
-                                showDeleteConfirm = true
-                            }
+                            HistoryRow(
+                                item: item,
+                                onCopy: { copy(item) },
+                                onDelete: {
+                                    itemPendingDelete = item
+                                    showDeleteConfirm = true
+                                },
+                                onReformat: settings.formattingEnabled ? { reformat(item) } : nil,
+                                isReformatting: reformattingItemID == item.id
+                            )
                         }
                     }
                 }
@@ -148,6 +154,49 @@ struct HistoryView: View {
             .clipped()
     }
 
+    private var stylePicker: some View {
+        Menu {
+            ForEach(TranscriptionStyle.allCases) { style in
+                Button {
+                    settings.formattingStyle = style
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: style.systemImage)
+                            .frame(width: 18)
+                        Text(style.title)
+                        Spacer()
+                    }
+                    .foregroundStyle(.primary)
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 8)
+                    .background(
+                        style == settings.formattingStyle
+                            ? Color(.systemGray4).opacity(0.6)
+                            : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    )
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: settings.formattingStyle.systemImage)
+                    .font(.caption)
+                Text(settings.formattingStyle.title)
+                    .font(.footnote.weight(.medium))
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Formatting style")
+    }
+
     private var recordSection: some View {
         VStack(spacing: 10) {
             waveformContainer
@@ -171,11 +220,15 @@ struct HistoryView: View {
                 .buttonStyle(.plain)
             }
 
+            if settings.formattingEnabled {
+                stylePicker
+            }
+
             ZStack {
-                if transcription.isTranscribing || isHandlingRecording {
+                if transcription.isTranscribing || isHandlingRecording || formatting.isFormatting {
                         HStack(spacing: 8) {
                             ProgressView()
-                            Text("Transcribing…")
+                            Text(formatting.isFormatting ? "Polishing…" : "Transcribing…")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -295,11 +348,12 @@ struct HistoryView: View {
                 toast.present("No speech detected")
                 return
             }
+            let finalText = await applyFormatting(to: text)
             if settings.autoCopy {
-                ClipboardService.copy(text)
+                ClipboardService.copy(finalText)
             }
             if settings.saveToHistory {
-                let item = TranscriptionItem(text: text, duration: result.audioDuration, source: "mic")
+                let item = TranscriptionItem(text: finalText, duration: result.audioDuration, source: "mic")
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
                     modelContext.insert(item)
                 }
@@ -317,6 +371,11 @@ struct HistoryView: View {
             present(error)
         }
         try? FileManager.default.removeItem(at: url)
+    }
+
+    private func applyFormatting(to text: String) async -> String {
+        guard settings.formattingEnabled else { return text }
+        return await formatting.format(text: text, style: settings.formattingStyle)
     }
 
     private func removeJunkEntries() {
@@ -338,6 +397,26 @@ struct HistoryView: View {
         ClipboardService.copy(item.text)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         toast.present("Copied!")
+    }
+
+    private func reformat(_ item: TranscriptionItem) {
+        guard settings.formattingEnabled, reformattingItemID == nil else { return }
+        reformattingItemID = item.id
+        Task { @MainActor in
+            defer { reformattingItemID = nil }
+            guard let rewritten = await formatting.reformat(text: item.text, style: settings.formattingStyle) else {
+                toast.present("Couldn't rewrite the note")
+                return
+            }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) {
+                item.text = rewritten
+            }
+            do {
+                try modelContext.save()
+            } catch {
+                present(error)
+            }
+        }
     }
 
     private func delete(_ item: TranscriptionItem) {

@@ -7,12 +7,13 @@ struct OnboardingView: View {
     var onSkip: (() -> Void)? = nil
 
     private enum Step: Int, CaseIterable {
-        case intro, model, privacy
+        case intro, styles, model, privacy
 
         @ViewBuilder
         var content: some View {
             switch self {
             case .intro: OnboardingIntroView()
+            case .styles: OnboardingStylesView()
             case .model: OnboardingModelView()
             case .privacy: OnboardingPrivacyView()
             }
