@@ -2,6 +2,12 @@ import SwiftUI
 import SwiftData
 import OpenWhisperShared
 
+extension Notification.Name {
+    /// Posted when the app is opened via `openwhisper://settings` (from the
+    /// keyboard extension) so the user can reach the full-access guidance.
+    static let openWhisperOpenSettings = Notification.Name("openWhisperOpenSettings")
+}
+
 @main
 struct openWhisperApp: App {
     @State private var settings: SettingsStore
@@ -25,6 +31,11 @@ struct openWhisperApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .onOpenURL { url in
+                    if url.host == "settings" {
+                        NotificationCenter.default.post(name: .openWhisperOpenSettings, object: nil)
+                    }
+                }
         }
         .environment(settings)
         .environment(modelDownload)

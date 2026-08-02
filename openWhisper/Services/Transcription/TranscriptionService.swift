@@ -44,6 +44,9 @@ final class TranscriptionService {
         case .gpu, .all: break
         case .ane, .cpu: return
         }
+        // GPU/Metal work is forbidden while the app is in the background — skip
+        // the shader warmup then (it's an optimization, never required).
+        guard UIApplication.shared.applicationState == .active else { return }
         let silence = [Float](repeating: 0, count: 16_000)
         await Task.detached(priority: .utility) { [engine] in
             _ = try? engine.transcribe(samples: silence, computeUnits: units)
@@ -85,7 +88,12 @@ final class TranscriptionService {
         do {
             return try await runTranscription(audioURL: audioURL, computeUnits: initialUnits, engine: engine)
         } catch {
-            guard preferred != .cpu, !isActive else { throw error }
+            // Re-check the CURRENT state: `isActive` above was captured before
+            // the call, so if the app backgrounds mid-flight we must still fall
+            // back to CPU (otherwise the GPU error surfaces and the dictation
+            // is lost).
+            let stillActive = UIApplication.shared.applicationState == .active
+            guard preferred != .cpu, !stillActive else { throw error }
             logger.error("GPU transcription failed in background (\(error.localizedDescription, privacy: .public)) — retrying on CPU")
             return try await runTranscription(audioURL: audioURL, computeUnits: .cpu, engine: engine)
         }

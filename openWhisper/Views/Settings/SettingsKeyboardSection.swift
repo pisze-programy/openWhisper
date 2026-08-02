@@ -25,16 +25,38 @@ struct SettingsKeyboardSection: View {
                 .privacySensitive()
             }
             Toggle("Hide key", isOn: $isSecure)
+
+            Button {
+                openKeyboardSettings()
+            } label: {
+                Label("Enable keyboard access", systemImage: "keyboard")
+            }
         } header: {
             SectionHeader(title: "Keyboard & AI dictation")
         } footer: {
-            Text("Used by the keyboard extension for cloud speech-to-text. Get a key at openrouter.ai — audio is sent to your chosen provider. The on-device app stays local and free. For the keyboard microphone, also enable Allow Full Access (Settings → General → Keyboard → OpenWhisper).")
+            Text("The OpenWhisper app runs 100% on-device and private. The keyboard extension uses a cloud speech model (an on-device model can't run inside a keyboard), so it needs internet access and Full Access: Settings → General → Keyboard → OpenWhisper.")
         }
         .onAppear {
             apiKey = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.cloudApiKeyKey) ?? ""
         }
         .onChange(of: apiKey) { _, newValue in
             UserDefaults(suiteName: AppGroup.identifier)?.set(newValue.trimmingCharacters(in: .whitespacesAndNewlines), forKey: AppGroup.cloudApiKeyKey)
+        }
+    }
+
+    /// Opens the phone's Settings → General → Keyboard (with a fallback to the
+    /// app's settings pane if the keyboard deep link is unavailable).
+    private func openKeyboardSettings() {
+        let primary = URL(string: "App-Prefs:root=General&path=Keyboard")
+        let fallback = URL(string: UIApplication.openSettingsURLString)
+        if let url = primary {
+            UIApplication.shared.open(url) { ok in
+                if !ok, let fb = fallback {
+                    UIApplication.shared.open(fb)
+                }
+            }
+        } else if let fb = fallback {
+            UIApplication.shared.open(fb)
         }
     }
 }
