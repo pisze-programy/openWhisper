@@ -1,30 +1,17 @@
 import SwiftUI
 import OpenWhisperShared
 
-/// Cloud dictation / keyboard settings: the OpenRouter API key used by the
-/// keyboard extension (stored in the shared App Group suite so the extension
-/// can read it).
 struct SettingsKeyboardSection: View {
     @Environment(SettingsStore.self) private var settingsStore
     @State private var apiKey: String = ""
-    @State private var isSecure = true
 
     var body: some View {
         Section {
-            HStack {
-                Group {
-                    if isSecure {
-                        SecureField("OpenRouter API key", text: $apiKey, prompt: Text("sk-or-…"))
-                    } else {
-                        TextField("OpenRouter API key", text: $apiKey, prompt: Text("sk-or-…"))
-                    }
-                }
+            SecureField("OpenRouter API key", text: $apiKey, prompt: Text("sk-or-…"))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.system(.body, design: .monospaced))
                 .privacySensitive()
-            }
-            Toggle("Hide key", isOn: $isSecure)
 
             Button {
                 openKeyboardSettings()
@@ -44,8 +31,6 @@ struct SettingsKeyboardSection: View {
         }
     }
 
-    /// Opens the phone's Settings → General → Keyboard (with a fallback to the
-    /// app's settings pane if the keyboard deep link is unavailable).
     private func openKeyboardSettings() {
         let primary = URL(string: "App-Prefs:root=General&path=Keyboard")
         let fallback = URL(string: UIApplication.openSettingsURLString)

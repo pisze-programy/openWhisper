@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(ModelDownloadManager.self) private var modelDownload
     @Environment(TranscriptionService.self) private var transcription
+    @Environment(ResidentDictation.self) private var resident
 
     var body: some View {
         ZStack {
@@ -23,10 +24,15 @@ struct RootView: View {
                     Task { await transcription.warmUp() }
                 }
             }
+            .onAppear {
+
+                resident.start()
+            }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
                     Task { await transcription.warmUp() }
+                    resident.reactivate()
                 case .background:
                     transcription.enterBackground()
                 default:

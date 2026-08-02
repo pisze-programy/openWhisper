@@ -11,6 +11,7 @@ struct HistoryView: View {
     @Environment(AudioRecorder.self) private var recorder
     @Environment(ToastCenter.self) private var toast
     @Environment(CorrectionsStore.self) private var corrections
+    @Environment(SettingsRouter.self) private var settingsRouter
 
     @Query(sort: \TranscriptionItem.createdAt, order: .reverse)
     private var items: [TranscriptionItem]
@@ -40,8 +41,15 @@ struct HistoryView: View {
             .navigationDestination(isPresented: $showSettings) {
                 SettingsView()
             }
-            .onReceive(NotificationCenter.default.publisher(for: .openWhisperOpenSettings)) { _ in
+            .onChange(of: settingsRouter.pendingSection) { _, section in
+                guard section != nil else { return }
                 showSettings = true
+            }
+            .onAppear {
+
+                if settingsRouter.pendingSection != nil {
+                    showSettings = true
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -50,8 +58,9 @@ struct HistoryView: View {
                         .font(.subheadline.weight(.semibold))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView()
+
+                    Button {
+                        showSettings = true
                     } label: {
                         Image(systemName: "gearshape")
                     }
@@ -79,8 +88,6 @@ struct HistoryView: View {
         }
     }
 
-    /// The notepad-style timeline: a leading vertical rail with day headers and
-    /// per-note dots; the note content sits to the right of the rail.
     private var timeline: some View {
         ScrollView {
             ZStack(alignment: .leading) {
@@ -108,7 +115,6 @@ struct HistoryView: View {
         }
     }
 
-    /// A day on the timeline: the day key plus its notes (newest first).
     private typealias HistorySection = (day: Date, items: [TranscriptionItem])
 
     private var sections: [HistorySection] {
@@ -177,7 +183,7 @@ struct HistoryView: View {
                     } else {
                         VStack(spacing: 12) {
                             MicRecordButton(isRecording: recorder.isRecording, size: 72) {
-                                // Tapping alone does nothing — recording is press-and-hold
+
                             }
                             .disabled(!modelDownload.isReady || isHandlingRecording || !transcription.isModelReady)
                             .simultaneousGesture(
@@ -301,6 +307,10 @@ struct HistoryView: View {
                     present(error)
                 }
             }
+        } catch TranscriptionError.noAudio {
+
+            try? FileManager.default.removeItem(at: url)
+            toast.present("No speech detected")
         } catch {
             present(error)
         }
@@ -340,7 +350,32 @@ struct HistoryView: View {
     }
 
     private func present(_ error: Error) {
+
+        if Self.shouldPresentAsToast(error) {
+            toast.present(error.localizedDescription)
+            return
+        }
         errorMessage = error.localizedDescription
         showError = true
+    }
+
+    private static func shouldPresentAsToast(_ error: Error) -> Bool {
+        if let recorderError = error as? RecorderError {
+            switch recorderError {
+            case .alreadyRecording, .noRecording, .formatUnavailable:
+                return true
+            case .permissionDenied:
+                return false
+            }
+        }
+        if let transcriptionError = error as? TranscriptionError {
+            switch transcriptionError {
+            case .busy, .noAudio:
+                return true
+            case .modelUnavailable, .failed:
+                return false
+            }
+        }
+        return false
     }
 }

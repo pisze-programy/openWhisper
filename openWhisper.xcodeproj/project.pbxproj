@@ -7,21 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		091A2B3C4D5E6F708192A3B4 /* OpenWhisperKeyboard.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		783C6F95301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
 		783C6F96301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
+		7865A1A2301F54170036B816 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7865A1A1301F54170036B816 /* WidgetKit.framework */; };
+		7865A1A4301F54170036B816 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7865A1A3301F54170036B816 /* SwiftUI.framework */; };
+		7865A1B9301F543A0036B816 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = 7865A1B8301F543A0036B816 /* OpenWhisperShared */; };
 		78732D0D301C6D030019D594 /* ParakeetTDT in Frameworks */ = {isa = PBXBuildFile; productRef = B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		2B3C4D5E6F708192A3B4C5D6 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 78732CE9301C64E90019D594 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A3B4C5D6E7F8091A2B3C4D5E;
-			remoteInfo = OpenWhisperKeyboard;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		3C4D5E6F708192A3B4C5D6E7 /* Embed App Extensions */ = {
@@ -30,7 +22,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				091A2B3C4D5E6F708192A3B4 /* OpenWhisperKeyboard.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -38,6 +29,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenWhisperWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7865A1A1301F54170036B816 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		7865A1A3301F54170036B816 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		78732CF1301C64E90019D594 /* openWhisper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = openWhisper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenWhisperKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -50,9 +44,24 @@
 			);
 			target = A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */;
 		};
+		7865A1B4301F54190036B816 /* Exceptions for "OpenWhisperWidget" folder in "OpenWhisperWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7865A19E301F54160036B816 /* OpenWhisperWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		7865A1A5301F54170036B816 /* OpenWhisperWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7865A1B4301F54190036B816 /* Exceptions for "OpenWhisperWidget" folder in "OpenWhisperWidgetExtension" target */,
+			);
+			path = OpenWhisperWidget;
+			sourceTree = "<group>";
+		};
 		78732CF3301C64E90019D594 /* openWhisper */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = openWhisper;
@@ -69,6 +78,16 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7865A19C301F54160036B816 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7865A1A4301F54170036B816 /* SwiftUI.framework in Frameworks */,
+				7865A1A2301F54170036B816 /* WidgetKit.framework in Frameworks */,
+				7865A1B9301F543A0036B816 /* OpenWhisperShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		78732CEE301C64E90019D594 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -89,11 +108,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7865A1A0301F54170036B816 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7865A1A1301F54170036B816 /* WidgetKit.framework */,
+				7865A1A3301F54170036B816 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		78732CE8301C64E90019D594 = {
 			isa = PBXGroup;
 			children = (
 				78732CF3301C64E90019D594 /* openWhisper */,
 				F203140518293A4B5C6D7E8F /* OpenWhisperKeyboard */,
+				7865A1A5301F54170036B816 /* OpenWhisperWidget */,
+				7865A1A0301F54170036B816 /* Frameworks */,
 				78732CF2301C64E90019D594 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -103,6 +133,7 @@
 			children = (
 				78732CF1301C64E90019D594 /* openWhisper.app */,
 				E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */,
+				7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -110,6 +141,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7865A19E301F54160036B816 /* OpenWhisperWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7865A1B5301F54190036B816 /* Build configuration list for PBXNativeTarget "OpenWhisperWidgetExtension" */;
+			buildPhases = (
+				7865A19B301F54160036B816 /* Sources */,
+				7865A19C301F54160036B816 /* Frameworks */,
+				7865A19D301F54160036B816 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7865A1A5301F54170036B816 /* OpenWhisperWidget */,
+			);
+			name = OpenWhisperWidgetExtension;
+			packageProductDependencies = (
+				7865A1B8301F543A0036B816 /* OpenWhisperShared */,
+			);
+			productName = OpenWhisperWidgetExtension;
+			productReference = 7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		78732CF0301C64E90019D594 /* openWhisper */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 78732CFC301C64EA0019D594 /* Build configuration list for PBXNativeTarget "openWhisper" */;
@@ -122,7 +176,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				1A2B3C4D5E6F708192A3B4C5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				78732CF3301C64E90019D594 /* openWhisper */,
@@ -169,6 +222,9 @@
 				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2660;
 				TargetAttributes = {
+					7865A19E301F54160036B816 = {
+						CreatedOnToolsVersion = 26.6;
+					};
 					78732CF0301C64E90019D594 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -194,11 +250,19 @@
 			targets = (
 				78732CF0301C64E90019D594 /* openWhisper */,
 				A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */,
+				7865A19E301F54160036B816 /* OpenWhisperWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		7865A19D301F54160036B816 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		78732CEF301C64E90019D594 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -216,6 +280,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7865A19B301F54160036B816 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		78732CED301C64E90019D594 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -231,14 +302,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		1A2B3C4D5E6F708192A3B4C5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */;
-			targetProxy = 2B3C4D5E6F708192A3B4C5D6 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0A1B2C3D4E5F60718293A4B5C /* Release */ = {
@@ -262,6 +325,68 @@
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7865A1B6301F54190036B816 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OpenWhisperWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisperWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.OpenWhisperWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7865A1B7301F54190036B816 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = OpenWhisperWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisperWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.OpenWhisperWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -490,6 +615,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7865A1B5301F54190036B816 /* Build configuration list for PBXNativeTarget "OpenWhisperWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7865A1B6301F54190036B816 /* Debug */,
+				7865A1B7301F54190036B816 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		78732CEC301C64E90019D594 /* Build configuration list for PBXProject "openWhisper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -531,6 +665,11 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7865A1B8301F543A0036B816 /* OpenWhisperShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */;
+			productName = OpenWhisperShared;
+		};
 		B2C3D4E5F60718293A4B5C6D /* ParakeetTDT */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */;

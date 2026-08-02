@@ -1,19 +1,25 @@
 import SwiftUI
 
-/// The complete dictation surface: idle mic → live waveform + stop/cancel →
-/// transcribing spinner → error. Shared by the app and the keyboard extension.
 public struct RecordingSurface: View {
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     public let isRecording: Bool
     public let isTranscribing: Bool
     public let error: String?
     public let errorTitle: String?
     public let fullAccessNeeded: Bool
     public let elapsed: TimeInterval
+
+    public let isMicEnabled: Bool
+
+    public let micDisabledHint: String?
     public let getSamples: () -> [Float]
     public let onMicTap: () -> Void
     public let onStop: () -> Void
     public let onCancel: () -> Void
     public let onOpenSettings: () -> Void
+
+    public let onRetry: () -> Void
 
     public init(
         isRecording: Bool,
@@ -22,11 +28,14 @@ public struct RecordingSurface: View {
         errorTitle: String?,
         fullAccessNeeded: Bool,
         elapsed: TimeInterval,
+        isMicEnabled: Bool = true,
+        micDisabledHint: String? = nil,
         getSamples: @escaping () -> [Float],
         onMicTap: @escaping () -> Void,
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void,
-        onOpenSettings: @escaping () -> Void
+        onOpenSettings: @escaping () -> Void,
+        onRetry: @escaping () -> Void = {}
     ) {
         self.isRecording = isRecording
         self.isTranscribing = isTranscribing
@@ -34,18 +43,29 @@ public struct RecordingSurface: View {
         self.errorTitle = errorTitle
         self.fullAccessNeeded = fullAccessNeeded
         self.elapsed = elapsed
+        self.isMicEnabled = isMicEnabled
+        self.micDisabledHint = micDisabledHint
         self.getSamples = getSamples
         self.onMicTap = onMicTap
         self.onStop = onStop
         self.onCancel = onCancel
         self.onOpenSettings = onOpenSettings
+        self.onRetry = onRetry
     }
 
+    private var isCompactHeight: Bool { verticalSizeClass == .compact }
+
+    private var buttonSize: CGFloat { isCompactHeight ? 64 : AppTheme.keyboardRecordButtonSize }
+    private var waveformHeight: CGFloat { isCompactHeight ? 32 : 48 }
+    private var cancelButtonSize: CGFloat { isCompactHeight ? 36 : 44 }
+    private var outerSpacing: CGFloat { isCompactHeight ? AppTheme.smallSpacing : AppTheme.largeSpacing }
+    private var innerSpacing: CGFloat { isCompactHeight ? AppTheme.smallSpacing : AppTheme.mediumSpacing }
+
     public var body: some View {
-        // Cap the content column so it stays centered and compact on wide screens (iPad).
-        VStack(spacing: AppTheme.largeSpacing) {
+
+        VStack(spacing: outerSpacing) {
             if isTranscribing {
-                VStack(spacing: AppTheme.mediumSpacing) {
+                VStack(spacing: innerSpacing) {
                     ProgressView()
                         .controlSize(.large)
                     Text("Transcribing…")
@@ -54,14 +74,14 @@ public struct RecordingSurface: View {
                 }
                 .transition(.opacity)
             } else if isRecording {
-                VStack(spacing: AppTheme.mediumSpacing) {
+                VStack(spacing: innerSpacing) {
                     LiveWaveform(getSamples: getSamples)
-                        .frame(height: 48)
+                        .frame(height: waveformHeight)
                     Text(timeString(elapsed))
                         .font(AppTheme.timerFont)
                         .foregroundStyle(.secondary)
                     HStack(spacing: 24) {
-                        MicRecordButton(isRecording: true, size: AppTheme.appRecordButtonSize, action: onStop)
+                        MicRecordButton(isRecording: true, size: buttonSize, action: onStop)
                         Button(action: onCancel) {
                             ZStack {
                                 if #available(iOS 26.0, *) {
@@ -75,15 +95,14 @@ public struct RecordingSurface: View {
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundStyle(.secondary)
                             }
-                            .frame(width: 44, height: 44)
+                            .frame(width: cancelButtonSize, height: cancelButtonSize)
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .transition(.opacity)
             } else if fullAccessNeeded || errorTitle != nil {
-                // Leading-aligned explanation block — red accent only on the
-                // title, the details in gray, and a direct path to the fix.
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text(errorTitle ?? "Full access needed:")
                         .font(.subheadline.weight(.semibold))
@@ -105,19 +124,44 @@ public struct RecordingSurface: View {
                                 .foregroundStyle(AppTheme.accent)
                         }
                         .padding(.top, 2)
+                    } else {
+                        Button {
+                            onRetry()
+                        } label: {
+                            Label("Try Again", systemImage: "arrow.clockwise")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        .padding(.top, 2)
                     }
                 }
                 .padding(.horizontal, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.opacity)
             } else {
-                VStack(spacing: AppTheme.mediumSpacing) {
-                    MicRecordButton(isRecording: false, size: AppTheme.keyboardRecordButtonSize, action: onMicTap)
-                    Text(error ?? "Tap the mic to dictate")
-                        .font(AppTheme.captionFont)
-                        .foregroundStyle(error == nil ? AppTheme.secondaryLabel : AppTheme.destructive)
-                        .multilineTextAlignment(.center)
+
+                Group {
+                    if isCompactHeight {
+                        HStack(spacing: AppTheme.mediumSpacing) {
+                            MicRecordButton(isRecording: false, size: buttonSize, isEnabled: isMicEnabled, action: onMicTap)
+                            Text(micDisabledHint ?? error ?? "Tap the mic to dictate")
+                                .font(.caption2)
+                                .foregroundStyle(micDisabledHint != nil || error != nil ? AppTheme.destructive : AppTheme.secondaryLabel)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         .padding(.horizontal, 24)
+                    } else {
+                        VStack(spacing: innerSpacing) {
+                            MicRecordButton(isRecording: false, size: buttonSize, isEnabled: isMicEnabled, action: onMicTap)
+                            Text(micDisabledHint ?? error ?? "Tap the mic to dictate")
+                                .font(AppTheme.captionFont)
+                                .foregroundStyle(micDisabledHint != nil || error != nil ? AppTheme.destructive : AppTheme.secondaryLabel)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                        }
+                    }
                 }
                 .transition(.opacity)
             }

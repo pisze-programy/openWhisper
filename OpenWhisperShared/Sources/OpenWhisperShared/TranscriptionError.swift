@@ -15,6 +15,8 @@ public struct TranscriptionResult: Sendable {
 public enum TranscriptionError: LocalizedError {
     case busy
     case modelUnavailable
+
+    case noAudio
     case failed(String)
 
     public var errorDescription: String? {
@@ -23,6 +25,8 @@ public enum TranscriptionError: LocalizedError {
             return "A transcription is already in progress."
         case .modelUnavailable:
             return "The speech model isn't downloaded yet."
+        case .noAudio:
+            return "No speech detected."
         case .failed(let message):
             return message
         }

@@ -3,8 +3,6 @@ import Foundation
 public enum AppGroup {
     public static let identifier = "group.piszeprogramy.openWhisper"
 
-    public static let keyboardLastUsedKey = "keyboardLastUsedAt"
-
     public static let cloudApiKeyKey = "settings.cloudApiKey"
     public static let languageCodeKey = "settings.languageCode"
     public static let autoStopOnSilenceKey = "settings.autoStopOnSilence"

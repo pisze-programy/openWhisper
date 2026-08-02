@@ -12,104 +12,241 @@ final class KeyboardDictationModel: ObservableObject {
     @Published var fullAccessNeeded = false
     @Published var elapsed: TimeInterval = 0
 
-    let controller = DictationController()
-    private var elapsedTimer: Timer?
+    @Published var needsAppOpen = false
 
-    /// Set by the view controller so the transcribed text can be inserted into
-    /// the host document (the model owns the transcription result).
+    @Published private(set) var currentLanguageName: String = "Auto"
+
+    @Published private(set) var hasAPIKey: Bool
+
     var onInsertText: ((String) -> Void)?
 
-    /// Set by the view controller from its `hasFullAccess` flag.
+    var onOpenApp: (() -> Void)?
+
     var isFullAccessGranted = true
 
+    private var resultPollTimer: Timer?
+    private var levelTimer: Timer?
+    private var lastSeenStamp: TimeInterval = 0
+    private var lastInsertedStamp: TimeInterval = 0
+    private var recordingStartedAt: Date?
+    private var wired = false
+
+    private var pendingCommand: AppGroup.Command.Action?
+
     init() {
-        controller.onPhaseChange = { [weak self] phase in self?.apply(phase) }
-        controller.onTranscription = { [weak self] text in
-            guard let self else { return }
-            self.reset()
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            self.onInsertText?(text)
-        }
+        let key = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.cloudApiKeyKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        hasAPIKey = !key.isEmpty
+        lastInsertedStamp = AppGroup.lastInsertedStamp
+        lastSeenStamp = lastInsertedStamp
+        wireBridge()
+        refreshConfiguration()
     }
 
-    var liveSamples: [Float] { controller.liveSamples }
+    private var controllerAPIKey: String {
+        UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.cloudApiKeyKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
 
-    func start() {
-        guard isFullAccessGranted else {
-            // Without Full Access the extension can't use the mic, network or
-            // clipboard — explain clearly instead of failing with cryptic errors.
-            isRecording = false
-            isTranscribing = false
-            error = "The keyboard uses a cloud model — it needs internet to dictate."
+    var liveSamples: [Float] {
+        let bucketCount = 28
+        let repeatCount = 65
+        let level = max(0, min(1, AppGroup.currentLevel()))
+        var out = [Float]()
+        out.reserveCapacity(bucketCount * repeatCount)
+
+        for i in 0..<bucketCount {
+            let fill = i >= bucketCount - 6 ? level : level * 0.35
+            out.append(contentsOf: repeatElement(fill, count: repeatCount))
+        }
+        return out
+    }
+
+    func refreshConfiguration() {
+        let code = UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.languageCodeKey)
+        currentLanguageName = code.flatMap { Language.language(for: $0)?.name } ?? "Auto"
+        hasAPIKey = !controllerAPIKey.isEmpty
+        if !isFullAccessGranted {
+            error = "The keyboard needs Full Access to talk to the OpenWhisper app."
             errorTitle = "Full access needed:"
             fullAccessNeeded = true
-            return
-        }
-        fullAccessNeeded = false
-        controller.requestPermissionAndStart()
-    }
-    func stop() {
-        controller.stopAndTranscribe()
-    }
-    func cancel() {
-        elapsedTimer?.invalidate()
-        elapsedTimer = nil
-        controller.cancel()
-        reset()
-    }
-
-    private func apply(_ phase: DictationController.Phase) {
-        switch phase {
-        case .idle:
-            reset()
-        case .requestingPermission:
-            error = nil
-            isRecording = false
-            isTranscribing = false
-        case .recording:
-            error = nil
-            isRecording = true
-            isTranscribing = false
-            startTimer()
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        case .transcribing:
-            elapsedTimer?.invalidate()
-            elapsedTimer = nil
-            isRecording = false
-            isTranscribing = true
-        case .failed(let message):
-            elapsedTimer?.invalidate()
-            elapsedTimer = nil
-            isRecording = false
-            isTranscribing = false
-            error = message
-            // Style network failures like the full-access block: red title +
-            // gray body.
-            if message.localizedCaseInsensitiveContains("internet") || message.localizedCaseInsensitiveContains("connection") {
-                errorTitle = "No internet connection:"
-            } else {
+        } else {
+            fullAccessNeeded = false
+            if errorTitle == "Full access needed:" {
+                error = nil
                 errorTitle = nil
             }
         }
     }
 
-    private func startTimer() {
-        elapsedTimer?.invalidate()
-        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.elapsed = self?.controller.elapsed ?? 0
-            }
+    func start() {
+        guard isFullAccessGranted else {
+            isRecording = false
+            isTranscribing = false
+            error = "The keyboard needs Full Access to talk to the OpenWhisper app."
+            errorTitle = "Full access needed:"
+            fullAccessNeeded = true
+            return
         }
-    }
 
-    private func reset() {
-        elapsedTimer?.invalidate()
-        elapsedTimer = nil
-        isRecording = false
+        guard AppGroup.isHostAlive() else {
+            needsAppOpen = true
+            error = "The OpenWhisper app isn't running in the background. Open it once, then come back here."
+            errorTitle = "Open OpenWhisper first:"
+            fullAccessNeeded = false
+            return
+        }
+
+        isRecording = true
         isTranscribing = false
         error = nil
         errorTitle = nil
         fullAccessNeeded = false
+        needsAppOpen = false
+        recordingStartedAt = Date()
+
+        AppGroup.clearDictation()
+        lastInsertedStamp = AppGroup.lastInsertedStamp
+        lastSeenStamp = lastInsertedStamp
+
+        AppGroup.writeCommand(.start)
+        DarwinBridge.post(.startRecording)
+        startLevelTimer()
+    }
+
+    func stop() {
+        guard isRecording else { return }
+        isRecording = false
+
+        if let started = recordingStartedAt, Date().timeIntervalSince(started) < 0.35 {
+            recordingStartedAt = nil
+            resetForIdle()
+            return
+        }
+        recordingStartedAt = nil
+
+        isTranscribing = true
+        AppGroup.writeCommand(.stop)
+        DarwinBridge.post(.stopRecording)
+        startResultPolling()
+        stopLevelTimer()
+    }
+
+    func cancel() {
+        recordingStartedAt = nil
+        isRecording = false
+        isTranscribing = false
+        AppGroup.writeCommand(.cancel)
+        DarwinBridge.post(.cancelRecording)
+        stopLevelTimer()
+        stopResultPolling()
+        resetForIdle()
+    }
+
+    func retry() {
+        error = nil
+        errorTitle = nil
+        fullAccessNeeded = false
+        needsAppOpen = false
+        isRecording = false
+        isTranscribing = false
+    }
+
+    private func resetForIdle() {
+        isRecording = false
+        isTranscribing = false
         elapsed = 0
+    }
+
+    private func wireBridge() {
+        guard !wired else { return }
+        wired = true
+
+        DarwinBridge.observe(.resultReady) { [weak self] in
+            self?.tryInsertNewDictation()
+        }
+        DarwinBridge.observe(.stateChanged) { [weak self] in
+            self?.refreshStateFromApp()
+        }
+        DarwinBridge.observe(.pong) { [weak self] in
+            self?.needsAppOpen = false
+        }
+    }
+
+    private func refreshStateFromApp() {
+        switch AppGroup.currentEngineState() {
+        case .recording:
+            isRecording = true
+        case .transcribing:
+            isRecording = false
+            isTranscribing = true
+        case .ready, .unknown:
+            if isTranscribing { tryInsertNewDictation() }
+            if !AppGroup.isHostAlive() {
+                needsAppOpen = true
+            }
+        case .error, .loading:
+            break
+        }
+    }
+
+    private func startResultPolling() {
+        stopResultPolling()
+        resultPollTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            self?.tryInsertNewDictation()
+        }
+        resultPollTimer?.tolerance = 0.05
+    }
+
+    private func stopResultPolling() {
+        resultPollTimer?.invalidate()
+        resultPollTimer = nil
+    }
+
+    private func tryInsertNewDictation() {
+        let stamp = AppGroup.lastDictationStamp
+        guard stamp > 0, stamp > lastInsertedStamp, stamp != lastSeenStamp else {
+
+            return
+        }
+        lastSeenStamp = stamp
+
+        guard let payload = AppGroup.readDictation() else {
+            return
+        }
+        lastInsertedStamp = stamp
+        AppGroup.setLastInsertedStamp(stamp)
+
+        AppGroup.clearDictation()
+        stopResultPolling()
+        stopLevelTimer()
+
+        if payload.text.isEmpty {
+            isTranscribing = false
+            resetForIdle()
+            error = payload.note ?? "No speech detected"
+            errorTitle = nil
+            fullAccessNeeded = false
+            return
+        }
+
+        isTranscribing = false
+        resetForIdle()
+        onInsertText?(payload.text)
+    }
+
+    private func startLevelTimer() {
+        stopLevelTimer()
+        levelTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.elapsed = Date().timeIntervalSince(self?.recordingStartedAt ?? Date())
+            let level = AppGroup.currentLevel()
+            _ = level
+        }
+        levelTimer?.tolerance = 0.05
+    }
+
+    private func stopLevelTimer() {
+        levelTimer?.invalidate()
+        levelTimer = nil
     }
 }

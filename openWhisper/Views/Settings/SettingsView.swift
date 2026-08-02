@@ -4,82 +4,88 @@ import Foundation
 struct SettingsView: View {
     @Environment(SettingsStore.self) private var settingsStore
     @Environment(ToastCenter.self) private var toast
+    @Environment(SettingsRouter.self) private var settingsRouter
 
     var body: some View {
         @Bindable var settings = settingsStore
 
-        Form {
-            SettingsModelSection()
+        ScrollViewReader { proxy in
+            Form {
+                SettingsModelSection()
 
-            SettingsKeyboardSection()
+                SettingsKeyboardSection()
 
-            Section {
-                ToggleRow(title: "Auto-copy to clipboard", isOn: $settings.autoCopy)
+                Section {
+                    ToggleRow(title: "Auto-copy to clipboard", isOn: $settings.autoCopy)
 
-                HStack {
-                    Text("Max recording duration")
-                    Spacer()
-                    Text("10 minutes")
+                    HStack {
+                        Text("Max recording duration")
+                        Spacer()
+                        Text("10 minutes")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    ToggleRow(title: "Auto-stop on silence", isOn: $settings.autoStopOnSilence)
+
+                    HStack {
+                        Text("Silence timeout")
+                        Spacer()
+                        Text("5 seconds")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    SectionHeader(title: "Recording")
+                }
+
+                Section {
+                    ToggleRow(title: "Save transcriptions to history", isOn: $settings.saveToHistory)
+
+                    Text("When off, transcriptions are not stored")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
+                } header: {
+                    SectionHeader(title: "Privacy")
                 }
 
-                ToggleRow(title: "Auto-stop on silence", isOn: $settings.autoStopOnSilence)
+                SettingsLanguageSection()
+                    .id("settings-section-language")
 
-                HStack {
-                    Text("Silence timeout")
-                    Spacer()
-                    Text("5 seconds")
-                        .foregroundStyle(.secondary)
-                }
-            } header: {
-                SectionHeader(title: "Recording")
-            }
+                SettingsDictionarySection()
 
-            Section {
-                ToggleRow(title: "Save transcriptions to history", isOn: $settings.saveToHistory)
-
-                Text("When off, transcriptions are not stored")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } header: {
-                SectionHeader(title: "Privacy")
-            }
-
-            SettingsLanguageSection()
-
-            SettingsDictionarySection()
-
-            Section {
-                NavigationRow(title: "Notepad & smart corrections", subtitle: "Phase 2")
-                    .disabled(true)
-            } header: {
-                SectionHeader(title: "Upcoming")
-            }
-
-            Section {
-                Button("Show onboarding again") {
-                    settingsStore.onboardingCompleted = false
-                }
-            } header: {
-                SectionHeader(title: "Onboarding")
-            }
-
-            Section {
-                NavigationLink {
-                    AboutView()
-                } label: {
-                    Text("About OpenWhisper")
+                Section {
+                    NavigationRow(title: "Notepad & smart corrections", subtitle: "Phase 2")
+                        .disabled(true)
+                } header: {
+                    SectionHeader(title: "Upcoming")
                 }
 
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text(appVersion)
-                        .foregroundStyle(.secondary)
+                Section {
+                    Button("Show onboarding again") {
+                        settingsStore.onboardingCompleted = false
+                    }
+                } header: {
+                    SectionHeader(title: "Onboarding")
                 }
-            } header: {
-                SectionHeader(title: "About")
+
+                Section {
+                    NavigationLink {
+                        AboutView()
+                    } label: {
+                        Text("About OpenWhisper")
+                    }
+
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text(appVersion)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    SectionHeader(title: "About")
+                }
             }
+            .onAppear { requestScrollIfNeeded(proxy) }
+            .onChange(of: settingsRouter.pendingSection) { _, _ in requestScrollIfNeeded(proxy) }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -87,6 +93,15 @@ struct SettingsView: View {
         .onChange(of: settingsStore.saveToHistory) { _, _ in toast.present("Saved!") }
         .onChange(of: settingsStore.computeUnits) { _, _ in toast.present("Saved!") }
         .onChange(of: settingsStore.languageCode) { _, _ in toast.present("Saved!") }
+    }
+
+    private func requestScrollIfNeeded(_ proxy: ScrollViewProxy) {
+        guard settingsRouter.pendingSection == "language" else { return }
+        DispatchQueue.main.async {
+            guard settingsRouter.pendingSection == "language" else { return }
+            withAnimation { proxy.scrollTo("settings-section-language", anchor: .center) }
+            settingsRouter.pendingSection = nil
+        }
     }
 
     private var appVersion: String {

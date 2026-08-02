@@ -3,33 +3,30 @@ import AVFoundation
 import UIKit
 import OpenWhisperShared
 
-/// Drives keyboard dictation: permission → record (shared pipeline) → pad →
-/// cloud STT (OpenRouter) → result. All UI-facing callbacks fire on the main
-/// thread. Reuses the shared `AudioCapturePipeline` (which also does the
-/// silence auto-stop from the app's shared settings).
 final class DictationController {
     enum Phase: Equatable {
         case idle
         case requestingPermission
         case recording
         case transcribing
-        case failed(String)
+
+        case failed(title: String, message: String)
     }
 
     private(set) var phase: Phase = .idle
     var onPhaseChange: ((Phase) -> Void)?
     var onTranscription: ((String) -> Void)?
 
-    var liveSamples: [Float] { pipeline.liveSamples }
+    var liveSamples: [Float] { recorder.liveSamples }
     private(set) var elapsed: TimeInterval = 0
     private let maxRecordingSeconds: TimeInterval = 60
 
-    private let pipeline = AudioCapturePipeline()
+    private let recorder = KeyboardRecorder()
     private var recordingURL: URL?
     private var startDate: Date?
     private var elapsedTimer: Timer?
     private var didFinish = false
-    /// Bumped on every start/cancel so stale transcription completions are dropped.
+
     private var transcriptionGeneration = 0
     private var interruptionObserver: (any NSObjectProtocol)?
 
@@ -48,8 +45,7 @@ final class DictationController {
                 let type = AVAudioSession.InterruptionType(rawValue: rawValue),
                 type == .began
             else { return }
-            // An interruption (e.g. a phone call) stops recording and transcribes
-            // whatever was captured so far.
+
             self.stopAndTranscribe()
         }
     }
@@ -59,22 +55,18 @@ final class DictationController {
             NotificationCenter.default.removeObserver(interruptionObserver)
         }
         stopElapsedTimer()
-        pipeline.stop()
+        recorder.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
     }
 
-    /// The current cloud API key (from the App Group suite, set in the app's
-    /// Settings). Empty when not configured.
     var apiKey: String {
         sharedDefaults?.string(forKey: AppGroup.cloudApiKeyKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
-    // MARK: - Flow
-
     func requestPermissionAndStart() {
         guard phase == .idle || isFailed else { return }
         guard !apiKey.isEmpty else {
-            fail("No API key — add it in OpenWhisper → Settings")
+            fail("No API key", message: "Add your OpenRouter API key in the OpenWhisper app → Settings.")
             return
         }
         didFinish = false
@@ -88,7 +80,7 @@ final class DictationController {
                     guard self.phase == .requestingPermission, !self.didFinish else { return }
                     self.startRecording()
                 } else {
-                    self.fail("Microphone access was denied. Enable it in Settings.")
+                    self.fail("Microphone access denied", message: "Enable the microphone for OpenWhisper in Settings → Privacy → Microphone.")
                 }
             }
         }
@@ -104,26 +96,27 @@ final class DictationController {
         transcriptionGeneration += 1
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.record, mode: .measurement, options: [])
+
+            try session.setCategory(.playAndRecord, mode: .measurement, options: [])
             try session.setActive(true)
         } catch {
-            fail("Couldn't start the audio session.")
+            fail("Couldn't start recording", message: "The microphone is unavailable right now. Try again.")
             return
         }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("KeyboardDictation-\(UUID().uuidString).wav")
         do {
-            // Honor the app's shared silence auto-stop settings.
+
             let enabled = sharedDefaults?.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
             let seconds = sharedDefaults?.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
-            pipeline.silenceAutoStopSeconds = enabled ? seconds : nil
-            pipeline.onSilenceThresholdExceeded = { [weak self] in
+            recorder.silenceAutoStopSeconds = enabled ? seconds : nil
+            recorder.onSilenceThresholdExceeded = { [weak self] in
                 DispatchQueue.main.async { self?.stopAndTranscribe() }
             }
-            try pipeline.start(outputURL: url)
+            try recorder.start(outputURL: url)
         } catch {
             try? session.setActive(false, options: [])
-            fail("Couldn't start recording.")
+            fail("Couldn't start recording", message: "The microphone is unavailable right now. Try again.")
             return
         }
         recordingURL = url
@@ -138,23 +131,24 @@ final class DictationController {
         guard phase == .recording, !didFinish else { return }
         didFinish = true
         stopElapsedTimer()
-        pipeline.stop()
+        recorder.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
 
-        guard let url = recordingURL else { return }
+        guard let url = recordingURL else {
+            return
+        }
         phase = .transcribing
         onPhaseChange?(phase)
 
         let key = apiKey
         guard !key.isEmpty else {
-            fail("No API key set — add it in OpenWhisper → Settings.")
+            fail("No API key", message: "Add your OpenRouter API key in the OpenWhisper app → Settings.")
             return
         }
 
         let language = sharedDefaults?.string(forKey: AppGroup.languageCodeKey)
         let generation = transcriptionGeneration
         Task.detached(priority: .userInitiated) { [weak self] in
-            let owner = self
             do {
                 let raw = try Data(contentsOf: url)
                 let samples = WAVPCM.decode(raw) ?? []
@@ -164,24 +158,30 @@ final class DictationController {
                 let text = try await client.transcribe(wavData: wav)
                 try? FileManager.default.removeItem(at: url)
                 await MainActor.run {
-                    guard let owner else { return }
-                    guard generation == owner.transcriptionGeneration else { return }
-                    owner.phase = .idle
-                    owner.onPhaseChange?(owner.phase)
-                    owner.onTranscription?(text)
+                    guard let self else { return }
+                    guard generation == self.transcriptionGeneration else { return }
+                    self.phase = .idle
+                    self.onPhaseChange?(self.phase)
+                    self.onTranscription?(text)
                 }
             } catch {
                 try? FileManager.default.removeItem(at: url)
+                let title: String
                 let message: String
                 if case .network = error as? OpenRouterError {
-                    message = "No internet connection. Check your connection and try again."
+                    title = "No internet connection"
+                    message = "Check your connection and try again."
+                } else if let stt = error as? OpenRouterError {
+                    title = "Transcription failed"
+                    message = stt.errorDescription ?? stt.localizedDescription
                 } else {
-                    message = (error as? OpenRouterError)?.errorDescription ?? error.localizedDescription
+                    title = "Transcription failed"
+                    message = error.localizedDescription
                 }
                 await MainActor.run {
-                    guard let owner else { return }
-                    guard generation == owner.transcriptionGeneration else { return }
-                    owner.fail(message)
+                    guard let self else { return }
+                    guard generation == self.transcriptionGeneration else { return }
+                    self.fail(title, message: message)
                 }
             }
         }
@@ -191,20 +191,18 @@ final class DictationController {
         didFinish = true
         transcriptionGeneration += 1
         stopElapsedTimer()
-        pipeline.stop()
+        recorder.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
         if let url = recordingURL { try? FileManager.default.removeItem(at: url) }
         phase = .idle
         onPhaseChange?(phase)
     }
 
-    // MARK: - Helpers
-
-    private func fail(_ message: String) {
+    private func fail(_ title: String, message: String) {
         stopElapsedTimer()
-        pipeline.stop()
+        recorder.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
-        phase = .failed(message)
+        phase = .failed(title: title, message: message)
         onPhaseChange?(phase)
     }
 

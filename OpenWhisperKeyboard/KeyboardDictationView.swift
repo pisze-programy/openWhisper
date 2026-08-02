@@ -1,30 +1,50 @@
 import SwiftUI
 import OpenWhisperShared
 
-/// SwiftUI root for the keyboard: observes the model so state changes animate
-/// in place (no per-change UIHostingController rebuilds).
 struct KeyboardDictationView: View {
     @ObservedObject var model: KeyboardDictationModel
     let onOpenSettings: () -> Void
+    let onOpenLanguageSettings: () -> Void
 
-    /// Content fades in only after the system's keyboard-presentation animation
-    /// has finished, masking the mic's layout jump during expansion.
     @State private var contentVisible = false
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    private var isCompactHeight: Bool { verticalSizeClass == .compact }
+
     var body: some View {
-        RecordingSurface(
-            isRecording: model.isRecording,
-            isTranscribing: model.isTranscribing,
-            error: model.error,
-            errorTitle: model.errorTitle,
-            fullAccessNeeded: model.fullAccessNeeded,
-            elapsed: model.elapsed,
-            getSamples: { model.liveSamples },
-            onMicTap: { model.start() },
-            onStop: { model.stop() },
-            onCancel: { model.cancel() },
-            onOpenSettings: onOpenSettings
-        )
+        VStack(spacing: 0) {
+            if !isCompactHeight {
+                HStack {
+                    Spacer()
+                    languageChip
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+            }
+            RecordingSurface(
+                isRecording: model.isRecording,
+                isTranscribing: model.isTranscribing,
+                error: model.error,
+                errorTitle: model.errorTitle,
+                fullAccessNeeded: model.fullAccessNeeded,
+                elapsed: model.elapsed,
+                isMicEnabled: model.isFullAccessGranted,
+                micDisabledHint: model.isFullAccessGranted ? nil : "Enable Full Access in iOS Settings to use dictation",
+                getSamples: { model.liveSamples },
+                onMicTap: { model.start() },
+                onStop: { model.stop() },
+                onCancel: { model.cancel() },
+                onOpenSettings: onOpenSettings,
+                onRetry: {
+                    if model.needsAppOpen {
+                        model.onOpenApp?()
+                    } else {
+                        model.retry()
+                    }
+                }
+            )
+        }
         .opacity(contentVisible ? 1 : 0)
         .onAppear {
             contentVisible = false
@@ -32,5 +52,17 @@ struct KeyboardDictationView: View {
                 contentVisible = true
             }
         }
+    }
+
+    private var languageChip: some View {
+        Button(action: onOpenLanguageSettings) {
+            Label(model.currentLanguageName, systemImage: "globe")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(AppTheme.secondaryLabel)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Capsule().fill(AppTheme.surface))
+        }
+        .buttonStyle(.plain)
     }
 }

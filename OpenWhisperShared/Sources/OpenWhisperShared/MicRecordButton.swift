@@ -1,15 +1,21 @@
 import SwiftUI
 
-/// The OpenWhisper record button — shared by the app and the keyboard
-/// extension so both use the identical look.
 public struct MicRecordButton: View {
     public let isRecording: Bool
     public let size: CGFloat
+
+    public let isEnabled: Bool
     public let action: () -> Void
 
-    public init(isRecording: Bool, size: CGFloat = AppTheme.appRecordButtonSize, action: @escaping () -> Void) {
+    public init(
+        isRecording: Bool,
+        size: CGFloat = AppTheme.appRecordButtonSize,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
         self.isRecording = isRecording
         self.size = size
+        self.isEnabled = isEnabled
         self.action = action
     }
 
@@ -22,8 +28,7 @@ public struct MicRecordButton: View {
                         .frame(width: size, height: size)
                         .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
                 } else if #available(iOS 26.0, *) {
-                    // Liquid Glass: the record button is a floating overlay element,
-                    // so it gets a glass effect with an accent tint + press feedback.
+
                     Circle()
                         .fill(.clear)
                         .frame(width: size, height: size)
@@ -42,7 +47,11 @@ public struct MicRecordButton: View {
                     .font(.system(size: size * 0.4, weight: .semibold))
                     .foregroundStyle(isRecording ? .white : AppTheme.accent)
             }
+
+            .opacity(isEnabled ? 1 : 0.4)
+            .saturation(isEnabled ? 1 : 0.1)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 }

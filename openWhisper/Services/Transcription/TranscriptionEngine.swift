@@ -25,8 +25,7 @@ nonisolated final class TranscriptionEngine: @unchecked Sendable {
         do {
             samples = try AudioLoader.loadMono16k(at: audioURL)
         } catch {
-            // loadMono16k throws raw ParakeetError (e.g. .audioEmpty when the
-            // recording captured no samples) — map it to the user-facing text.
+
             throw Self.map(error)
         }
         return try transcribe(samples: samples, computeUnits: computeUnits)
@@ -85,7 +84,7 @@ nonisolated final class TranscriptionEngine: @unchecked Sendable {
         case .audioLoadFailed(let url, let underlying):
             return .failed("Couldn't read the audio file \(url.lastPathComponent): \(underlying.localizedDescription)")
         case .audioEmpty:
-            return .failed("The recording contains no audio.")
+            return .noAudio
         case .unexpectedOutputShape(let name, let got, let expected):
             return .failed("Unexpected model output shape for '\(name)' (got \(got), expected \(expected)).")
         case .missingOutput(let name):
