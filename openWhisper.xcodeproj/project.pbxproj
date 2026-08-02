@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0F102030405060708091A2B3 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
+		10102030405060708091A2B3 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 5F6A7B8C9D0E1F20293A4B5C /* FluidAudio */; };
 		783C6F95301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
 		783C6F96301CF4E300004B40 /* OpenWhisperShared in Frameworks */ = {isa = PBXBuildFile; productRef = D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */; };
 		7865A1A2301F54170036B816 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7865A1A1301F54170036B816 /* WidgetKit.framework */; };
@@ -29,6 +31,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		6A7B8C9D0E1F203040506070 /* openWhisperMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = openWhisperMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenWhisperWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7865A1A1301F54170036B816 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7865A1A3301F54170036B816 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -67,6 +70,11 @@
 			path = openWhisper;
 			sourceTree = "<group>";
 		};
+		7B8C9D0E1F20304050607080 /* openWhisperMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = openWhisperMac;
+			sourceTree = "<group>";
+		};
 		F203140518293A4B5C6D7E8F /* OpenWhisperKeyboard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -97,6 +105,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8E9F102030405060708091A2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F102030405060708091A2B3 /* OpenWhisperShared in Frameworks */,
+				10102030405060708091A2B3 /* FluidAudio in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C5D6E7F8091A2B3C4D5E6F70 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -123,6 +140,7 @@
 				78732CF3301C64E90019D594 /* openWhisper */,
 				F203140518293A4B5C6D7E8F /* OpenWhisperKeyboard */,
 				7865A1A5301F54170036B816 /* OpenWhisperWidget */,
+				7B8C9D0E1F20304050607080 /* openWhisperMac */,
 				7865A1A0301F54170036B816 /* Frameworks */,
 				78732CF2301C64E90019D594 /* Products */,
 			);
@@ -134,6 +152,7 @@
 				78732CF1301C64E90019D594 /* openWhisper.app */,
 				E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */,
 				7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */,
+				6A7B8C9D0E1F203040506070 /* openWhisperMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,6 +208,30 @@
 			productReference = 78732CF1301C64E90019D594 /* openWhisper.app */;
 			productType = "com.apple.product-type.application";
 		};
+		8C9D0E1F2030405060708090 /* openWhisperMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9D0E1F2030405060708090A1 /* Build configuration list for PBXNativeTarget "openWhisperMac" */;
+			buildPhases = (
+				8D9E0F102030405060708091 /* Sources */,
+				8E9F102030405060708091A2 /* Frameworks */,
+				8FA0102030405060708091B3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7B8C9D0E1F20304050607080 /* openWhisperMac */,
+			);
+			name = openWhisperMac;
+			packageProductDependencies = (
+				D2E3F40518293A4B5C6D7E8F /* OpenWhisperShared */,
+				5F6A7B8C9D0E1F20293A4B5C /* FluidAudio */,
+			);
+			productName = openWhisperMac;
+			productReference = 6A7B8C9D0E1F203040506070 /* openWhisperMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 		A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E7F8091A2B3C4D5E6F708192 /* Build configuration list for PBXNativeTarget "OpenWhisperKeyboard" */;
@@ -242,6 +285,7 @@
 			packageReferences = (
 				A1B2C3D4E5F60718293A4B5C /* XCLocalSwiftPackageReference "Packages/parakeet-coreml-swift" */,
 				C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */,
+				4F5A6B7C8D9E0F10293A4B5C /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 78732CF2301C64E90019D594 /* Products */;
@@ -251,6 +295,7 @@
 				78732CF0301C64E90019D594 /* openWhisper */,
 				A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */,
 				7865A19E301F54160036B816 /* OpenWhisperWidgetExtension */,
+				8C9D0E1F2030405060708090 /* openWhisperMac */,
 			);
 		};
 /* End PBXProject section */
@@ -264,6 +309,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		78732CEF301C64E90019D594 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FA0102030405060708091B3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -288,6 +340,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		78732CED301C64E90019D594 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8D9E0F102030405060708091 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -327,6 +386,61 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		1A2B3C4D5E6F708192A3B4C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = openWhisperMac/Info.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = openWhisperMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		2B3C4D5E6F708192A3B4C5D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = openWhisperMac/Info.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = openWhisperMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.mac;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -642,6 +756,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		9D0E1F2030405060708090A1 /* Build configuration list for PBXNativeTarget "openWhisperMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1A2B3C4D5E6F708192A3B4C5 /* Debug */,
+				2B3C4D5E6F708192A3B4C5D6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E7F8091A2B3C4D5E6F708192 /* Build configuration list for PBXNativeTarget "OpenWhisperKeyboard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -664,7 +787,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		4F5A6B7C8D9E0F10293A4B5C /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		5F6A7B8C9D0E1F20293A4B5C /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4F5A6B7C8D9E0F10293A4B5C /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
+		};
 		7865A1B8301F543A0036B816 /* OpenWhisperShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C1D2E3F40518293A4B5C6D7E /* XCLocalSwiftPackageReference "OpenWhisperShared" */;
