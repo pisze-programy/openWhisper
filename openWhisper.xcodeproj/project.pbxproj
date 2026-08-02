@@ -399,7 +399,7 @@
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_ADDITIONS = Info-Additions.plist;
+				INFOPLIST_ADDITIONS = "Info-Additions.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisper;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "OpenWhisper uses the microphone to transcribe your speech into text. Audio is processed on your device and never leaves it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -435,7 +435,7 @@
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_ADDITIONS = Info-Additions.plist;
+				INFOPLIST_ADDITIONS = "Info-Additions.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = OpenWhisper;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "OpenWhisper uses the microphone to transcribe your speech into text. Audio is processed on your device and never leaves it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
