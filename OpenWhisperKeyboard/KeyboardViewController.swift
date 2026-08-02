@@ -1,17 +1,12 @@
 import UIKit
 import SwiftUI
-import Combine
-import os
 import SwiftData
 import OpenWhisperShared
 
 final class KeyboardViewController: UIInputViewController {
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "keyboard")
-
     @MainActor private let model = KeyboardDictationModel()
 
-    private var hosting: UIHostingController<RecordingSurface>?
-    private var cancellables = Set<AnyCancellable>()
+    private var hosting: UIHostingController<KeyboardDictationView>?
 
     /// UIKit queries this when deciding dictation support for the keyboard.
     /// Returning nil (the default) makes TextInput's
@@ -66,12 +61,7 @@ final class KeyboardViewController: UIInputViewController {
             self?.insertText(text)
         }
 
-        // RecordingSurface captures the @Published values at construction, so
-        // rebuild the root view whenever the model changes.
-        model.objectWillChange
-            .sink { [weak self] _ in self?.installSurface() }
-            .store(in: &cancellables)
-
+        model.isFullAccessGranted = hasFullAccess
         installSurface()
     }
 
@@ -82,30 +72,31 @@ final class KeyboardViewController: UIInputViewController {
         configureDictationBehavior()
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // The keyboard is going away (dismissed / host backgrounded / switched):
+        // stop and transcribe whatever was captured instead of losing it.
+        if model.isRecording {
+            model.stop()
+        }
+    }
+
     private func installSurface() {
-        let surface = RecordingSurface(
-            isRecording: model.isRecording,
-            isTranscribing: model.isTranscribing,
-            error: model.error,
-            elapsed: model.elapsed,
-            getSamples: { [weak model] in model?.liveSamples ?? [] },
-            onMicTap: { [weak model] in model?.start() },
-            onStop: { [weak model] in model?.stop() },
-            onCancel: { [weak model] in model?.cancel() }
-        )
-        let hosting = UIHostingController(rootView: surface)
+        guard hosting == nil else { return }
+        let root = KeyboardDictationView(model: model) { [weak self] in
+            self?.openKeyboardSettings()
+        }
+        let hosting = UIHostingController(rootView: root)
+        // CRITICAL: default sizingOptions = .intrinsicContentSize makes the system
+        // shrink the keyboard to the SwiftUI content's intrinsic size (~116 pt here)
+        // and first lays it out at the full screen height — that's the "half
+        // screen" + "button flies out" bug. Fill the system keyboard frame instead.
+        hosting.sizingOptions = []
         hosting.view.translatesAutoresizingMaskIntoConstraints = false
         // Default hosting view background is opaque black — make it clear so
         // the system keyboard background (like the native keyboard) shows.
         hosting.view.backgroundColor = .clear
         hosting.view.isOpaque = false
-
-        if let old = self.hosting {
-            old.willMove(toParent: nil)
-            old.view.removeFromSuperview()
-            old.removeFromParent()
-        }
-
         addChild(hosting)
         view.addSubview(hosting.view)
         hosting.didMove(toParent: self)
@@ -120,7 +111,13 @@ final class KeyboardViewController: UIInputViewController {
 
     private func insertText(_ text: String) {
         guard !text.isEmpty else { return }
-        textDocumentProxy.insertText(text)
+        let chunkSize = 200
+        var index = text.startIndex
+        while index < text.endIndex {
+            let end = text.index(index, offsetBy: chunkSize, limitedBy: text.endIndex) ?? text.endIndex
+            textDocumentProxy.insertText(String(text[index..<end]))
+            index = end
+        }
         if UserDefaults(suiteName: AppGroup.identifier)?.object(forKey: "settings.autoCopy") as? Bool ?? true {
             UIPasteboard.general.string = text
         }
@@ -140,5 +137,26 @@ final class KeyboardViewController: UIInputViewController {
             context.insert(item)
             try? context.save()
         }
+    }
+
+    /// "Open Settings": prefers opening the OpenWhisper app at its Settings
+    /// screen (where the full-access guidance lives and its link works), and
+    /// only falls back to the phone's keyboard settings deep link (then the app
+    /// settings pane) if the previous attempt failed.
+    private func openKeyboardSettings() {
+        var candidates = [
+            URL(string: "openwhisper://settings"),
+            URL(string: "App-Prefs:root=General&path=Keyboard"),
+            URL(string: UIApplication.openSettingsURLString),
+        ].compactMap { $0 }
+
+        func tryNext() {
+            guard !candidates.isEmpty else { return }
+            let url = candidates.removeFirst()
+            extensionContext?.open(url) { ok in
+                if !ok { tryNext() }
+            }
+        }
+        tryNext()
     }
 }

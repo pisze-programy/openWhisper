@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 import OpenWhisperShared
 
 @MainActor
@@ -7,6 +8,8 @@ final class KeyboardDictationModel: ObservableObject {
     @Published var isRecording = false
     @Published var isTranscribing = false
     @Published var error: String?
+    @Published var errorTitle: String?
+    @Published var fullAccessNeeded = false
     @Published var elapsed: TimeInterval = 0
 
     let controller = DictationController()
@@ -16,11 +19,15 @@ final class KeyboardDictationModel: ObservableObject {
     /// the host document (the model owns the transcription result).
     var onInsertText: ((String) -> Void)?
 
+    /// Set by the view controller from its `hasFullAccess` flag.
+    var isFullAccessGranted = true
+
     init() {
         controller.onPhaseChange = { [weak self] phase in self?.apply(phase) }
         controller.onTranscription = { [weak self] text in
             guard let self else { return }
             self.reset()
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             self.onInsertText?(text)
         }
     }
@@ -28,6 +35,17 @@ final class KeyboardDictationModel: ObservableObject {
     var liveSamples: [Float] { controller.liveSamples }
 
     func start() {
+        guard isFullAccessGranted else {
+            // Without Full Access the extension can't use the mic, network or
+            // clipboard — explain clearly instead of failing with cryptic errors.
+            isRecording = false
+            isTranscribing = false
+            error = "The keyboard uses a cloud model — it needs internet to dictate."
+            errorTitle = "Full access needed:"
+            fullAccessNeeded = true
+            return
+        }
+        fullAccessNeeded = false
         controller.requestPermissionAndStart()
     }
     func stop() {
@@ -53,6 +71,7 @@ final class KeyboardDictationModel: ObservableObject {
             isRecording = true
             isTranscribing = false
             startTimer()
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .transcribing:
             elapsedTimer?.invalidate()
             elapsedTimer = nil
@@ -64,6 +83,13 @@ final class KeyboardDictationModel: ObservableObject {
             isRecording = false
             isTranscribing = false
             error = message
+            // Style network failures like the full-access block: red title +
+            // gray body.
+            if message.localizedCaseInsensitiveContains("internet") || message.localizedCaseInsensitiveContains("connection") {
+                errorTitle = "No internet connection:"
+            } else {
+                errorTitle = nil
+            }
         }
     }
 
@@ -82,6 +108,8 @@ final class KeyboardDictationModel: ObservableObject {
         isRecording = false
         isTranscribing = false
         error = nil
+        errorTitle = nil
+        fullAccessNeeded = false
         elapsed = 0
     }
 }

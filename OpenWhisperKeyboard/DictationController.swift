@@ -73,6 +73,10 @@ final class DictationController {
 
     func requestPermissionAndStart() {
         guard phase == .idle || isFailed else { return }
+        guard !apiKey.isEmpty else {
+            fail("No API key — add it in OpenWhisper → Settings")
+            return
+        }
         didFinish = false
         phase = .requestingPermission
         onPhaseChange?(phase)
@@ -150,6 +154,7 @@ final class DictationController {
         let language = sharedDefaults?.string(forKey: AppGroup.languageCodeKey)
         let generation = transcriptionGeneration
         Task.detached(priority: .userInitiated) { [weak self] in
+            let owner = self
             do {
                 let raw = try Data(contentsOf: url)
                 let samples = WAVPCM.decode(raw) ?? []
@@ -159,19 +164,24 @@ final class DictationController {
                 let text = try await client.transcribe(wavData: wav)
                 try? FileManager.default.removeItem(at: url)
                 await MainActor.run {
-                    guard let self else { return }
-                    guard generation == self.transcriptionGeneration else { return }
-                    self.phase = .idle
-                    self.onPhaseChange?(self.phase)
-                    self.onTranscription?(text)
+                    guard let owner else { return }
+                    guard generation == owner.transcriptionGeneration else { return }
+                    owner.phase = .idle
+                    owner.onPhaseChange?(owner.phase)
+                    owner.onTranscription?(text)
                 }
             } catch {
                 try? FileManager.default.removeItem(at: url)
-                let message = (error as? OpenRouterError)?.errorDescription ?? error.localizedDescription
+                let message: String
+                if case .network = error as? OpenRouterError {
+                    message = "No internet connection. Check your connection and try again."
+                } else {
+                    message = (error as? OpenRouterError)?.errorDescription ?? error.localizedDescription
+                }
                 await MainActor.run {
-                    guard let self else { return }
-                    guard generation == self.transcriptionGeneration else { return }
-                    self.fail(message)
+                    guard let owner else { return }
+                    guard generation == owner.transcriptionGeneration else { return }
+                    owner.fail(message)
                 }
             }
         }
@@ -191,6 +201,7 @@ final class DictationController {
     // MARK: - Helpers
 
     private func fail(_ message: String) {
+        stopElapsedTimer()
         pipeline.stop()
         try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
         phase = .failed(message)
