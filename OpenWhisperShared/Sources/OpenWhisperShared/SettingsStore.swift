@@ -99,18 +99,42 @@ public final class SettingsStore {
     }
 
     /// Whether finished transcripts are rewritten by the AI formatting step.
+    /// Derived from the selected style: `.none` skips the LLM request entirely,
+    /// so a separate disable toggle is no longer needed.
     public var formattingEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(formattingEnabled, forKey: "settings.formattingEnabled")
-        }
+        formattingStyle != .none
     }
 
     /// Style applied to new transcriptions. Chosen at recording time; persisted
-    /// here so the picker remembers the last selection.
+    /// here so the picker remembers the last selection. `.none` runs the
+    /// transcript through local cleanup only — no API request.
     public var formattingStyle: TranscriptionStyle {
         didSet {
+            guard !suppressFormattingStyleSave else { return }
             UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
         }
+    }
+
+    /// Set while cycling styles with the hotkey so intermediate previews are not
+    /// persisted; the final selection is saved on key release.
+    private var suppressFormattingStyleSave = false
+
+    /// Advances to the next style in `TranscriptionStyle.allCases` (wrapping).
+    /// Used by the macOS style-switch hotkey so NONE can be reached without
+    /// opening the app. Pass `preview: true` while the user is still holding the
+    /// hotkey — nothing is written to UserDefaults until `persistFormattingStyle`.
+    public func cycleFormattingStyle(preview: Bool = false) {
+        suppressFormattingStyleSave = preview
+        defer { suppressFormattingStyleSave = false }
+        let all = TranscriptionStyle.allCases
+        guard let index = all.firstIndex(of: formattingStyle) else { return }
+        formattingStyle = all[(index + 1) % all.count]
+    }
+
+    /// Persists the currently selected style. Called when the style-switch
+    /// hotkey is released.
+    public func persistFormattingStyle() {
+        UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
     }
 
     public var onboardingCompleted: Bool {
@@ -174,9 +198,12 @@ public final class SettingsStore {
         microphoneBoostEnabled = defaults.object(forKey: "settings.microphoneBoost") as? Bool ?? true
         transcribeShortQuietClipsAggressively = defaults.object(forKey: "settings.aggressiveShortClips") as? Bool ?? true
         requireSecondEscapeToCancel = defaults.object(forKey: "settings.requireSecondEscape") as? Bool ?? false
-        formattingEnabled = defaults.object(forKey: "settings.formattingEnabled") as? Bool ?? true
-        let styleRaw = defaults.string(forKey: "settings.formattingStyle")
-        formattingStyle = styleRaw.flatMap(TranscriptionStyle.init(rawValue:)) ?? .formal
+        var style = defaults.string(forKey: "settings.formattingStyle").flatMap(TranscriptionStyle.init(rawValue:)) ?? .formal
+        // Legacy installs that had the AI rewrite toggle off map to NONE.
+        if defaults.object(forKey: "settings.formattingEnabled") as? Bool == false {
+            style = .none
+        }
+        formattingStyle = style
         launchAtLogin = defaults.object(forKey: "settings.launchAtLogin") as? Bool ?? true
     }
 }

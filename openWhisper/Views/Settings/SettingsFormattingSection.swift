@@ -5,21 +5,16 @@ struct SettingsFormattingSection: View {
     @Environment(SettingsStore.self) private var settingsStore
 
     var body: some View {
-        @Bindable var settings = settingsStore
-
         Section {
-            ToggleRow(title: "Rewrite with AI", isOn: $settings.formattingEnabled)
-
             ForEach(TranscriptionStyle.allCases) { style in
-                StyleOptionRow(style: style, isSelected: settings.formattingStyle == style) {
-                    settings.formattingStyle = style
+                StyleOptionRow(style: style, isSelected: settingsStore.formattingStyle == style) {
+                    settingsStore.formattingStyle = style
                 }
-                .disabled(!settings.formattingEnabled)
             }
         } header: {
-            SectionHeader(title: "AI Formatting")
+            SectionHeader(title: "Formatting Style")
         } footer: {
-            Text("Each transcription is sent to a fast cloud model that rewrites it in the selected style. Needs the OpenRouter API key above.")
+            Text("Pick None for a fast, local transcript with no API request. Other styles are rewritten by a cloud model and need the OpenRouter API key above.")
         }
     }
 }

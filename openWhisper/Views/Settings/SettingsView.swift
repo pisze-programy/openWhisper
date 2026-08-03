@@ -130,7 +130,6 @@ struct SettingsView: View {
         .onChange(of: settingsStore.saveToHistory) { _, _ in toast.present("Saved!") }
         .onChange(of: settingsStore.computeUnits) { _, _ in toast.present("Saved!") }
         .onChange(of: settingsStore.languageCode) { _, _ in toast.present("Saved!") }
-        .onChange(of: settingsStore.formattingEnabled) { _, _ in toast.present("Saved!") }
         .onChange(of: settingsStore.formattingStyle) { _, _ in toast.present("Saved!") }
     }
 

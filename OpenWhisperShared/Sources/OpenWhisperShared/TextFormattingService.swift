@@ -16,6 +16,12 @@ public final class TextFormattingService {
 
     public init() {}
 
+    /// Whether an OpenRouter API key is configured. UI uses this to warn that a
+    /// non-NONE style cannot be applied without a key.
+    public static var hasApiKey: Bool {
+        !storedApiKey.isEmpty
+    }
+
     /// Rewrites `text` in `style`. Never throws — on any failure it returns the
     /// original text so the note is still saved.
     public func format(text: String, style: TranscriptionStyle) async -> String {

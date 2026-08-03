@@ -92,6 +92,7 @@ public struct OpenRouterFormattingClient: Sendable {
     /// rewrites; a touch of variety for expressive styles.
     private static func temperature(for style: TranscriptionStyle) -> Double {
         switch style {
+        case .none: return 0.2
         case .formal: return 0.2
         case .casual: return 0.3
         case .veryCasual: return 0.4

@@ -93,7 +93,6 @@ struct SettingsView: View {
 struct StyleCard: View {
     let style: TranscriptionStyle
     let isSelected: Bool
-    let isEnabled: Bool
     let action: () -> Void
 
     var body: some View {

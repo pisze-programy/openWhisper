@@ -6,6 +6,7 @@ import OpenWhisperShared
 public enum FormattingPrompts {
     public static func instruction(for style: TranscriptionStyle) -> String {
         switch style {
+        case .none: return ""
         case .formal: return FormalPrompt.instruction
         case .casual: return CasualPrompt.instruction
         case .veryCasual: return VeryCasualPrompt.instruction

@@ -9,8 +9,16 @@ final class StatusOverlayPanel {
     var activeAppIcon: NSImage?
     var getSamples: (@MainActor () -> [Float])?
 
+    private static let recordingPanelSize = NSSize(width: 280, height: 52)
+    private static let stylePanelSize = NSSize(width: 380, height: 52)
+
     private var panel: NSPanel?
     private var hostingView: NSHostingView<StatusOverlayView>?
+    private var styleHostingView: NSHostingView<StyleOverlayView>?
+    private var styleGeneration = 0
+    private var styleTask: Task<Void, Never>?
+    private var currentStyle: TranscriptionStyle = .none
+    private var currentOnConfirm: (() -> Void)?
 
     private init() {}
 
@@ -18,10 +26,78 @@ final class StatusOverlayPanel {
         if panel == nil {
             createPanel()
         }
+        cancelStyleOverlay()
         hostingView?.rootView = StatusOverlayView(phase: phase, appIcon: activeAppIcon)
         if panel?.isVisible != true {
-            animateShow()
+            animateShow(size: Self.recordingPanelSize)
+        } else {
+            positionAndShow(size: Self.recordingPanelSize)
+            panel?.alphaValue = 1
         }
+    }
+
+    /// Shows the style-switch overlay for a chosen style. After a short delay the
+    /// style icon morphs into a green checkmark and `onConfirm` fires (the sound);
+    /// then the overlay auto-hides. Rapid re-cycling replaces the overlay, which
+    /// cancels the pending hide of the previous style.
+    func showStyleSwitch(style: TranscriptionStyle, onConfirm: (() -> Void)? = nil) {
+        styleGeneration += 1
+        let generation = styleGeneration
+        currentStyle = style
+        currentOnConfirm = onConfirm
+        styleTask?.cancel()
+        if panel == nil {
+            createPanel()
+        }
+        hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
+        styleHostingView?.rootView = StyleOverlayView(style: style, confirmed: false)
+        styleHostingView?.isHidden = false
+        if panel?.isVisible != true {
+            animateShow(size: Self.stylePanelSize)
+        } else {
+            positionAndShow(size: Self.stylePanelSize)
+            panel?.alphaValue = 1
+        }
+        scheduleStyleConfirmation(after: 900, generation: generation)
+    }
+
+    /// Called when the style-switch hotkey is released after cycling: skip
+    /// straight to the confirmation (checkmark + sound) and close shortly after.
+    /// The selection has already been persisted by the caller.
+    func confirmStyleSelection() {
+        styleTask?.cancel()
+        let generation = styleGeneration
+        guard panel?.isVisible == true, styleHostingView?.isHidden == false else { return }
+        styleHostingView?.rootView = StyleOverlayView(style: currentStyle, confirmed: true)
+        currentOnConfirm?()
+        styleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.hide()
+        }
+    }
+
+    private func scheduleStyleConfirmation(after delayMillis: Int, generation: Int) {
+        styleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(delayMillis))
+            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.styleHostingView?.rootView = StyleOverlayView(style: self.currentStyle, confirmed: true)
+            self.currentOnConfirm?()
+            try? await Task.sleep(for: .milliseconds(450))
+            guard self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.hide()
+        }
+    }
+
+    /// Removes the pending style overlay (e.g. when a recording starts).
+    /// Bumping the generation cancels the auto-hide task and invalidates any
+    /// in-flight confirmation callback.
+    private func cancelStyleOverlay() {
+        styleGeneration += 1
+        styleTask?.cancel()
+        styleTask = nil
+        styleHostingView?.rootView = StyleOverlayView(style: .none, confirmed: false)
+        styleHostingView?.isHidden = true
     }
 
     func hide() {
@@ -30,7 +106,7 @@ final class StatusOverlayPanel {
 
     private func createPanel() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 52),
+            contentRect: NSRect(x: 0, y: 0, width: Self.recordingPanelSize.width, height: Self.recordingPanelSize.height),
             styleMask: [.borderless, .nonactivatingPanel, .hudWindow],
             backing: .buffered,
             defer: false
@@ -44,35 +120,43 @@ final class StatusOverlayPanel {
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
 
-        let wrapper = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 52))
+        let wrapper = NSView(frame: NSRect(x: 0, y: 0, width: Self.recordingPanelSize.width, height: Self.recordingPanelSize.height))
         wrapper.wantsLayer = true
         wrapper.layer?.backgroundColor = NSColor.clear.cgColor
+
         let hostingView = NSHostingView(rootView: StatusOverlayView(phase: .idle, appIcon: nil))
         hostingView.frame = wrapper.bounds
         hostingView.autoresizingMask = [.width, .height]
         wrapper.addSubview(hostingView)
+
+        let styleHostingView = NSHostingView(rootView: StyleOverlayView(style: .none, confirmed: false))
+        styleHostingView.frame = wrapper.bounds
+        styleHostingView.autoresizingMask = [.width, .height]
+        styleHostingView.isHidden = true
+        wrapper.addSubview(styleHostingView)
+
         panel.contentView = wrapper
         panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         self.panel = panel
         self.hostingView = hostingView
+        self.styleHostingView = styleHostingView
     }
 
-    private func positionAndShow() {
+    private func positionAndShow(size: NSSize) {
         guard let panel else { return }
         let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
             ?? NSScreen.main
         guard let screen else { return }
         let frame = screen.visibleFrame
-        let size = NSSize(width: 280, height: 52)
         let x = frame.midX - size.width / 2
         let y = frame.minY + 80
         panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: false)
         panel.orderFrontRegardless()
     }
 
-    private func animateShow() {
+    private func animateShow(size: NSSize) {
         guard let panel else { return }
-        positionAndShow()
+        positionAndShow(size: size)
         panel.alphaValue = 0
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.2
@@ -218,5 +302,55 @@ private struct LiveWaveformOverlay: View {
     private static func barHeight(bar: CGFloat, index: Int, count: Int, level: CGFloat) -> CGFloat {
         let envelope = 0.55 + 0.45 * CGFloat(sin(Double.pi * Double(index + 1) / Double(count + 1)))
         return max(min(bar * envelope * level, 16), 2.5)
+    }
+}
+
+/// Transient confirmation shown while cycling styles with the hotkey. The style
+/// icon occupies a single slot and morphs into a green checkmark right before
+/// the overlay closes. Pure presentation — the timing lives in the panel, which
+/// swaps `confirmed` and hides the overlay.
+private struct StyleOverlayView: View {
+    let style: TranscriptionStyle
+    let confirmed: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(style.title)
+                    .font(.system(size: 15, weight: .semibold))
+                Text(style.whenToUse)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .lineLimit(1)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 12)
+
+            Image(systemName: confirmed ? "checkmark.circle.fill" : style.systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(confirmed ? .green : .white)
+                .frame(width: 22)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .compositingGroup()
+        .background {
+            ZStack {
+                Capsule()
+                    .fill(.black.opacity(0.3))
+                    .blur(radius: 16)
+                    .offset(y: 3)
+
+                Capsule()
+                    .fill(.regularMaterial)
+            }
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        }
     }
 }

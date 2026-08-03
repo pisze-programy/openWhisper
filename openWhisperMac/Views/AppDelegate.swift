@@ -72,6 +72,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotkeyManager.shared.onRecordStart = { orchestrator.startRecording() }
         HotkeyManager.shared.onRecordStop = { orchestrator.stopAndTranscribe() }
         HotkeyManager.shared.onCancel = { orchestrator.cancel() }
+        HotkeyManager.shared.onCycleStyle = {
+            // Preview only — the final style is persisted on key release.
+            settings.cycleFormattingStyle(preview: true)
+            StatusOverlayPanel.shared.showStyleSwitch(style: settings.formattingStyle) {
+                FeedbackSoundService.shared.play(.styleChanged)
+            }
+        }
+        HotkeyManager.shared.onStyleCycleEnd = {
+            settings.persistFormattingStyle()
+            StatusOverlayPanel.shared.confirmStyleSelection()
+        }
         HotkeyManager.shared.start()
 
         if !settings.onboardingCompleted {

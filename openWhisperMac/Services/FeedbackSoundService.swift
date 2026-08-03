@@ -9,6 +9,7 @@ final class FeedbackSoundService {
     enum Event {
         case recordingStarted
         case transcriptionSuccess
+        case styleChanged
         case error
     }
 
@@ -26,6 +27,7 @@ final class FeedbackSoundService {
         switch event {
         case .recordingStarted: name = "recording_start"
         case .transcriptionSuccess: name = "transcription_success"
+        case .styleChanged: name = nil
         case .error: name = "error"
         }
 
@@ -42,6 +44,7 @@ final class FeedbackSoundService {
         switch event {
         case .recordingStarted: name = "recording_start"
         case .transcriptionSuccess: name = "transcription_success"
+        case .styleChanged: return 0
         case .error: name = "error"
         }
         guard let url = bundledSound(named: name),
@@ -69,6 +72,7 @@ final class FeedbackSoundService {
         switch event {
         case .recordingStarted: return "Bottle"
         case .transcriptionSuccess: return "Glass"
+        case .styleChanged: return "Glass"
         case .error: return "Funk"
         }
     }
