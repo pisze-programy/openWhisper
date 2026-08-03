@@ -6,7 +6,7 @@ extension TranscriptionStyle {
         case .formal: return "Complete sentences, no filler words."
         case .casual: return "Natural conversation, light polish."
         case .veryCasual: return "Just fix speech artifacts, keep your words."
-        case .excited: return "Condense to bullet points and key info."
+        case .excited: return "Condense into a tight, key-point summary."
         }
     }
 
