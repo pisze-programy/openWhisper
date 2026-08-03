@@ -5,7 +5,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCHEME="openWhisperMac"
-DERIVED="$HOME/Library/Developer/Xcode/DerivedData"
 APP_NAME="OpenWhisper"
 OUT="$HOME/Desktop/${APP_NAME}.dmg"
 TMP="$(mktemp -d)"
@@ -13,32 +12,36 @@ trap 'rm -rf "$TMP"' EXIT
 
 echo "==> Building Release…"
 xcodebuild -project "$ROOT/openWhisper.xcodeproj" \
-  -scheme "$SCHEME" -configuration Release build \
-  | xcpretty -s 2>/dev/null || \
+  -scheme "$SCHEME" -configuration Release \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$TMP/derived" \
+  build | xcpretty -s 2>/dev/null || \
   xcodebuild -project "$ROOT/openWhisper.xcodeproj" \
-  -scheme "$SCHEME" -configuration Release build >/dev/null
+  -scheme "$SCHEME" -configuration Release \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$TMP/derived" \
+  build >/dev/null
 
-APP="$DERIVED/openWhisper-*/Build/Products/Release/${APP_NAME}.app"
-APP="$(echo "$APP" | head -1)"
+APP="$TMP/derived/Build/Products/Release/${APP_NAME}.app"
 [ -d "$APP" ] || { echo "ERROR: $APP not found"; exit 1; }
 
 echo "==> Staging…"
-mkdir -p "$TMP/stage" "$TMP/icons"
+mkdir -p "$TMP/stage" "$TMP/volume_icon.iconset"
 cp -R "$APP" "$TMP/stage/"
 cp "$ROOT/openWhisperMac/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$TMP/icon.png"
 
-# Volume icon
-sips -z 512 512 "$TMP/icon.png" --out "$TMP/icons/icon_512x512@2x.png" >/dev/null 2>&1
-sips -z 256 256 "$TMP/icon.png" --out "$TMP/icons/icon_256x256@2x.png" >/dev/null 2>&1
-sips -z 256 256 "$TMP/icon.png" --out "$TMP/icons/icon_256x256.png" >/dev/null 2>&1
-sips -z 128 128 "$TMP/icon.png" --out "$TMP/icons/icon_128x128@2x.png" >/dev/null 2>&1
-sips -z 128 128 "$TMP/icon.png" --out "$TMP/icons/icon_128x128.png" >/dev/null 2>&1
-sips -z 64 64 "$TMP/icon.png" --out "$TMP/icons/icon_64x64.png" >/dev/null 2>&1
-sips -z 32 32 "$TMP/icon.png" --out "$TMP/icons/icon_32x32@2x.png" >/dev/null 2>&1
-sips -z 32 32 "$TMP/icon.png" --out "$TMP/icons/icon_32x32.png" >/dev/null 2>&1
-sips -z 16 16 "$TMP/icon.png" --out "$TMP/icons/icon_16x16@2x.png" >/dev/null 2>&1
-sips -z 16 16 "$TMP/icon.png" --out "$TMP/icons/icon_16x16.png" >/dev/null 2>&1
-iconutil -c icns "$TMP/icons" -o "$TMP/volume_icon.icns"
+# Volume icon (standard iconutil iconset layout)
+sips -z 16 16 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_16x16.png" >/dev/null 2>&1
+sips -z 32 32 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_16x16@2x.png" >/dev/null 2>&1
+sips -z 32 32 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_32x32.png" >/dev/null 2>&1
+sips -z 64 64 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_32x32@2x.png" >/dev/null 2>&1
+sips -z 128 128 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_128x128.png" >/dev/null 2>&1
+sips -z 256 256 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_128x128@2x.png" >/dev/null 2>&1
+sips -z 256 256 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_256x256.png" >/dev/null 2>&1
+sips -z 512 512 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_256x256@2x.png" >/dev/null 2>&1
+sips -z 512 512 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_512x512.png" >/dev/null 2>&1
+sips -z 1024 1024 "$TMP/icon.png" --out "$TMP/volume_icon.iconset/icon_512x512@2x.png" >/dev/null 2>&1
+iconutil -c icns "$TMP/volume_icon.iconset" -o "$TMP/volume_icon.icns"
 
 # Background (gradient + icon + arrow)
 python3 - "$TMP" <<'PYEOF'
@@ -85,9 +88,9 @@ format = "UDBZ"
 size = "100M"
 window_rect = ((200, 120), (660, 400))
 icon_size = 96
-background = "background.png"
+background = "$TMP/background.png"
 icon_locations = {"$APP_NAME.app": (200, 200), "Applications": (450, 200)}
-icon = "volume_icon.icns"
+icon = "$TMP/volume_icon.icns"
 PYEOF
 
 cd "$TMP/stage"

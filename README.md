@@ -1,8 +1,16 @@
-# OpenWhisper
+<p align="center">
+  <img src="logo.png" width="80" alt="OpenWhisper logo">
+</p>
 
-Dictate anywhere, type faster. Private speech-to-text for **macOS** and **iPhone** — fully on-device, open source.
+<h1 align="center">OpenWhisper</h1>
 
-OpenWhisper turns your voice into text on your own hardware using the Parakeet TDT 0.6B v3 model. Audio never leaves your device — recordings are processed and stored locally. No cloud, no account, no training on your data.
+<p align="center">
+  <strong>Dictate anywhere, type faster.</strong> Private speech-to-text for **macOS** and **iPhone** — fully on-device, open source.<br>
+  Hold the hotkey, speak, release — your words appear at the cursor. Everything runs on your own hardware:<br>
+  no cloud, no account, no audio ever leaves your device.
+</p>
+
+<p align="center">Powered by <a href="https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3">Parakeet TDT 0.6B v3</a> on Apple Silicon.</p>
 
 ---
 
@@ -72,7 +80,7 @@ Three-step setup: intro, one-time model download, privacy promise.
 | UI | SwiftUI |
 | Minimum OS | macOS 26 · iOS 18+ |
 | Speech model (macOS) | [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) via [FluidAudio](https://github.com/FluidInference/FluidAudio) |
-| Speech model (iOS) | Parakeet TDT 0.6B v3 → [Core ML](https://huggingface.co/mweinbach1/parakeet-tdt-0.6b-v3-coreml) via `parakeet-coreml-swift` (vendored at `Packages/`) |
+| Speech model (iOS) | Parakeet TDT 0.6B v3 → [Core ML](https://huggingface.co/mweinbach1/parakeet-tdt-0.6b-v3-coreml) via [parakeet-coreml-ios](https://github.com/pisze-programy/parakeet-coreml-ios) (vendored at `Packages/`) |
 | AI formatting | [OpenRouter](https://openrouter.ai) (optional, needs API key) |
 | Persistence | SwiftData, local-only |
 | Shared code | `OpenWhisperShared` Swift package — prompts, punctuation, number normalization, STT orchestration, shared UI components |
@@ -86,7 +94,7 @@ openWhisperMac/        macOS app (menu bar, overlay, dictation pipeline)
 openWhisper/           iOS app (on-device dictation, onboarding, history)
 OpenWhisperShared/     shared Swift package (logic + UI used by both platforms)
 OpenWhisperKeyboard/   keyboard extension — shelved
-Packages/              vendored parakeet-coreml-swift
+Packages/              vendored parakeet-coreml-ios
 scripts/make-dmg.sh    one-command Release build → DMG for macOS
 ```
 
@@ -112,7 +120,6 @@ scripts/make-dmg.sh    one-command Release build → DMG for macOS
 ## Roadmap
 
 - **macOS 1.0** — core dictation loop, overlay, history, settings, DMG distribution
-- **Polish pass** — refine formatting quality, more styles, punctuation tuning
 - **Keyboard extension** (maybe) — bring back shelved extension for dictate-anywhere on iPhone
 - **App Store release** — macOS (and iOS) with free on-device core
 
@@ -132,5 +139,5 @@ OpenWhisper is free and open source. If it saves you time:
 ## License & attribution
 
 - App source code: Apache-2.0
-- `parakeet-coreml-swift`: Apache-2.0 — mweinbach
-- Model weights: CC-BY-4.0 — NVIDIA Parakeet TDT 0.6B v3; Core ML conversion by [mweinbach1](https://huggingface.co/mweinbach1)
+- `parakeet-coreml-ios`: Apache-2.0 — [pisze-programy/parakeet-coreml-ios](https://github.com/pisze-programy/parakeet-coreml-ios) (our fork of `parakeet-coreml-swift`, faster, improved and tested)
+- Model weights: CC-BY-4.0 — NVIDIA Parakeet TDT 0.6B v3

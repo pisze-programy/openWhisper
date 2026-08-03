@@ -14,9 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let recorder = MacRecorder()
     private let transcription = MacTranscriptionService()
     private let modelDownload = ModelDownloadManager.shared
+    private var sleepObserver: SystemSleepObserver?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.current = self
+        PermissionUpgradeGuard.resetAccessibilityIfUpgraded()
         PermissionManager.shared.refresh()
         ModelDownloadManager.shared.refreshStatus()
 
@@ -49,6 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         self.orchestrator = orchestrator
 
+        let sleepObserver = SystemSleepObserver(recorder: recorder, orchestrator: orchestrator)
+        sleepObserver.start()
+        self.sleepObserver = sleepObserver
+
         StatusOverlayPanel.shared.getSamples = { [weak recorder] in
             recorder?.liveSamples ?? []
         }
@@ -72,7 +78,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
         } else {
-            Task { await transcription.warmUp() }
+            Task {
+                await transcription.warmUp()
+                await recorder.prewarm()
+            }
         }
 
         DispatchQueue.main.async { [weak self] in
@@ -84,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        sleepObserver?.stop()
         orchestrator?.cancel()
         AudioDuckingService.shared.restore()
     }

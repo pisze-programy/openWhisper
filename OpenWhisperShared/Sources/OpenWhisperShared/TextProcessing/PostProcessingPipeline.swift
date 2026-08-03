@@ -61,6 +61,11 @@ public final class PostProcessingPipeline {
         var result = text
         var applied: [String] = []
 
+        // 050 — engine marker stripping (e.g. [NOISE], [MUSIC])
+        let beforeMarkers = result
+        result = MarkerStripper.strip(result)
+        if result != beforeMarkers { applied.append("Marker stripping") }
+
         // 100 — number normalization
         let beforeNumbers = result
         result = NumberWordNormalizer.normalize(text: result, language: context.languageCode)

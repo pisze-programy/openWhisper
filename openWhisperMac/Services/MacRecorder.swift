@@ -80,7 +80,23 @@ final class MacRecorder: RecorderProviding {
         recoveryStore.discardActiveRecording()
     }
 
-    private func startEngine() throws {
+    /// Warms the audio capture graph at launch without starting the engine, so
+    /// the mic indicator only appears while actually recording and the first
+    /// dictation avoids the engine-init delay. No-op unless the microphone is
+    /// already granted.
+    func prewarm() async {
+        guard !isRecording, !engine.isRunning else { return }
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return }
+        do {
+            try prepareEngine()
+        } catch {
+            teardownEngine()
+        }
+    }
+
+    /// Builds the capture graph (converter + tap) and calls `prepare()` without
+    /// starting the engine. Idempotent — safe to call repeatedly.
+    private func prepareEngine() throws {
         if engine.isRunning { engine.stop() }
         engine.inputNode.removeTap(onBus: 0)
         engine.reset()
@@ -105,12 +121,25 @@ final class MacRecorder: RecorderProviding {
         }
 
         engine.prepare()
+    }
+
+    private func startEngine() throws {
+        try prepareEngine()
         do {
             try engine.start()
         } catch {
             engine.inputNode.removeTap(onBus: 0)
             throw RecorderError.engineError(error.localizedDescription)
         }
+    }
+
+    /// Releases the prepared capture graph. Used when warm-up fails so a cold
+    /// start on the next dictation takes the normal path.
+    private func teardownEngine() {
+        if engine.isRunning { engine.stop() }
+        engine.inputNode.removeTap(onBus: 0)
+        engine.reset()
+        converter = nil
     }
 
     private func observeConfigChanges() {

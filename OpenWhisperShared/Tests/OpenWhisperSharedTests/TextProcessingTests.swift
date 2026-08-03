@@ -52,6 +52,24 @@ final class TextProcessingTests: XCTestCase {
         XCTAssertEqual(result, "hello, world")
     }
 
+    func testMarkerStrippingRemovesKnownMarkers() {
+        XCTAssertEqual(MarkerStripper.strip("hello [NOISE] world"), "hello world")
+        XCTAssertEqual(MarkerStripper.strip("hello [MUSIC]"), "hello")
+        XCTAssertEqual(MarkerStripper.strip("[LAUGHTER] hello"), "hello")
+        XCTAssertEqual(MarkerStripper.strip("a (cough) b"), "a b")
+        XCTAssertEqual(MarkerStripper.strip("[BLANK_AUDIO] hello [APPLAUSE]"), "hello")
+    }
+
+    func testMarkerStrippingCaseInsensitive() {
+        XCTAssertEqual(MarkerStripper.strip("hello [noise] and [MUSIC]"), "hello and")
+    }
+
+    func testMarkerStrippingPreservesArbitraryBrackets() {
+        XCTAssertEqual(MarkerStripper.strip("use [Ctrl+C] here"), "use [Ctrl+C] here")
+        XCTAssertEqual(MarkerStripper.strip("note [1] and (2)"), "note [1] and (2)")
+        XCTAssertEqual(MarkerStripper.strip("plain text"), "plain text")
+    }
+
     func testSilencePadder() {
         let short = [Float](repeating: 0, count: 4000) // 0.25s
         let padded = SilencePadder.pad(short, rawDuration: 0.25)
