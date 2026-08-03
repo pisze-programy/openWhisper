@@ -4,53 +4,13 @@ import OpenWhisperShared
 struct SettingsView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(PermissionManager.self) private var permissionManager
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         @Bindable var settings = settings
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SettingsSection("Dictation") {
-                    ToggleRow(
-                        "Auto-copy to clipboard",
-                        description: "Copies the transcribed text automatically when dictation finishes.",
-                        isOn: $settings.autoCopy
-                    )
-                    ToggleRow(
-                        "Auto-paste into active app",
-                        description: "Pastes the text directly into the frontmost app. Requires Accessibility permission.",
-                        isOn: $settings.autoPaste
-                    )
-                    ToggleRow(
-                        "Preserve clipboard after paste",
-                        description: "Restores the previous clipboard content after pasting.",
-                        isOn: $settings.preserveClipboard
-                    )
-                }
-
-                SettingsSection("Formatting") {
-                    ToggleRow(
-                        "Rewrite with AI",
-                        description: "Removes filler words, fixes grammar, and applies your chosen writing style via OpenRouter.",
-                        isOn: $settings.formattingEnabled
-                    )
-                        .padding(.bottom, 6)
-
-                    VStack(spacing: 8) {
-                        ForEach(TranscriptionStyle.allCases) { style in
-                            StyleCard(
-                                style: style,
-                                isSelected: settings.formattingStyle == style,
-                                isEnabled: settings.formattingEnabled
-                            ) {
-                                settings.formattingStyle = style
-                            }
-                        }
-                    }
-                    .opacity(settings.formattingEnabled ? 1 : 0.4)
-                    .disabled(!settings.formattingEnabled)
-                }
-
                 SettingsSection("Audio") {
                     ToggleRow(
                         "Whisper Mode (auto gain)",
@@ -106,14 +66,16 @@ struct SettingsView: View {
                     )
                 }
 
-                SettingsSection("OpenRouter API") {
-                    ApiKeyRow(keyName: AppGroup.cloudApiKeyKey, placeholder: "sk-or-...")
-                }
-
                 HStack {
                     Spacer()
                     Button("Show onboarding again") {
                         settings.onboardingCompleted = false
+                        openWindow(id: "setup")
+                        NSApp.setActivationPolicy(.regular)
+                        DispatchQueue.main.async {
+                            NSApp.windows.first(where: { $0.title == "OpenWhisper Setup" })?.makeKeyAndOrderFront(nil)
+                            NSApp.activate(ignoringOtherApps: true)
+                        }
                     }
                     .font(.caption)
                     .buttonStyle(.borderless)
@@ -128,7 +90,7 @@ struct SettingsView: View {
     }
 }
 
-private struct StyleCard: View {
+struct StyleCard: View {
     let style: TranscriptionStyle
     let isSelected: Bool
     let isEnabled: Bool
@@ -173,7 +135,7 @@ private struct StyleCard: View {
     }
 }
 
-private struct SettingsSection<Content: View>: View {
+struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
@@ -200,7 +162,7 @@ private struct SettingsSection<Content: View>: View {
     }
 }
 
-private struct ToggleRow: View {
+struct ToggleRow: View {
     let title: String
     let description: String
     @Binding var isOn: Bool
@@ -254,7 +216,7 @@ private struct PermissionStatusRow: View {
     }
 }
 
-private struct ApiKeyRow: View {
+struct ApiKeyRow: View {
     let keyName: String
     let placeholder: String
     @State private var text: String = ""

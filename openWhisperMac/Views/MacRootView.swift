@@ -4,8 +4,10 @@ import OpenWhisperShared
 
 struct MacRootView: View {
 
-    enum Section: String, CaseIterable, Identifiable {
+    enum SidebarSection: String, CaseIterable, Identifiable {
         case history
+        case formatting
+        case dictation
         case settings
 
         var id: String { rawValue }
@@ -13,19 +15,47 @@ struct MacRootView: View {
         var title: String {
             switch self {
             case .history: return "History"
+            case .formatting: return "Formatting"
+            case .dictation: return "Dictation"
             case .settings: return "Settings"
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .history: return "Past transcriptions"
+            case .formatting: return "AI style and rewrite"
+            case .dictation: return "Model, recording, API"
+            case .settings: return "Audio, history, permissions"
             }
         }
 
         var systemImage: String {
             switch self {
             case .history: return "clock.arrow.circlepath"
+            case .formatting: return "wand.and.stars"
+            case .dictation: return "waveform.badge.mic"
             case .settings: return "gearshape"
             }
         }
     }
 
+    private static var mainSections: [SidebarSection] { [.history, .formatting, .dictation] }
+    private static var pinnedSections: [SidebarSection] { [.settings] }
+
     @Environment(MainWindowState.self) private var windowState
+
+    private func sectionRow(_ section: SidebarSection) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label(section.title, systemImage: section.systemImage)
+            Text(section.subtitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 22)
+        }
+        .padding(.vertical, 3)
+        .tag(section)
+    }
 
     var body: some View {
         @Bindable var windowState = windowState
@@ -57,11 +87,21 @@ struct MacRootView: View {
 
                 Divider()
 
-                List(Section.allCases, selection: $windowState.selectedSection) { section in
-                    Label(section.title, systemImage: section.systemImage)
-                        .tag(section)
+                List(selection: $windowState.selectedSection) {
+                    Section {
+                        ForEach(Self.mainSections) { section in
+                            sectionRow(section)
+                        }
+                    }
+
+                    Section {
+                        ForEach(Self.pinnedSections) { section in
+                            sectionRow(section)
+                        }
+                    }
                 }
                 .listStyle(.sidebar)
+                .padding(.vertical, 4)
 
                 Divider()
 
@@ -80,6 +120,8 @@ struct MacRootView: View {
         } detail: {
             switch windowState.selectedSection {
             case .history: HistoryView()
+            case .formatting: FormattingView()
+            case .dictation: DictationView()
             case .settings: SettingsView()
             }
         }

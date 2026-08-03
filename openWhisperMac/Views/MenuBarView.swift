@@ -53,9 +53,12 @@ struct MenuBarView: View {
 
             Button("Show Onboarding") {
                 settings.onboardingCompleted = false
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate(ignoringOtherApps: true)
                 openWindow(id: "setup")
+                NSApp.setActivationPolicy(.regular)
+                DispatchQueue.main.async {
+                    NSApp.windows.first(where: { $0.title == "OpenWhisper Setup" })?.makeKeyAndOrderFront(nil)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
             }
 
             Button("Quit") {
@@ -65,9 +68,12 @@ struct MenuBarView: View {
     }
 
     private func showMainWindow() {
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "openwhisper")
+        NSApp.setActivationPolicy(.regular)
+        DispatchQueue.main.async {
+            NSApp.windows.first(where: { $0.title == "OpenWhisper" })?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func statusText(for phase: DictationOrchestrator.Phase) -> String {

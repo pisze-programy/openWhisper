@@ -9,6 +9,9 @@ xcuserdata/
 *.xcscmblueprint
 *.xccheckout
 
+# Release artifacts (uploaded to GitHub Releases, not stored in git)
+release/
+
 # Swift Package Manager
 .build/
 .swiftpm/
