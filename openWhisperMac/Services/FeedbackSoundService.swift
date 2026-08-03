@@ -32,7 +32,8 @@ final class FeedbackSoundService {
         if let url = bundledSound(named: name ?? "") {
             playFile(at: url)
         } else if let systemName = systemSoundName(for: event) {
-            NSSound(named: systemName)?.play()
+            let sound = NSSound(named: systemName)
+            sound?.play()
         }
     }
 
@@ -66,7 +67,7 @@ final class FeedbackSoundService {
 
     private func systemSoundName(for event: Event) -> String? {
         switch event {
-        case .recordingStarted: return "Pop"
+        case .recordingStarted: return "Bottle"
         case .transcriptionSuccess: return "Glass"
         case .error: return "Funk"
         }

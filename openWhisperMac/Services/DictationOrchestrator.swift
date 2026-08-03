@@ -71,8 +71,8 @@ final class DictationOrchestrator {
 
         activeTask = Task { [weak self] in
             guard let self else { return }
-            self.ducking.duck()
             self.sounds.play(.recordingStarted)
+            self.ducking.duck()
             do {
                 try await self.recorder.start()
                 self.setPhase(.listening)
