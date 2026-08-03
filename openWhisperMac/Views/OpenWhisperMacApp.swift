@@ -13,6 +13,7 @@ struct OpenWhisperMacApp: App {
     @State private var toast = ToastCenter()
     @State private var corrections = CorrectionsStore()
     @State private var clipboard = MacClipboardService.shared
+    @State private var windowState = MainWindowState()
     @State private var container: ModelContainer?
 
     init() {
@@ -42,6 +43,7 @@ struct OpenWhisperMacApp: App {
             MenuBarView()
                 .environment(settings)
                 .environment(toast)
+                .environment(windowState)
         }
         .menuBarExtraStyle(.menu)
 
@@ -53,6 +55,7 @@ struct OpenWhisperMacApp: App {
                 .environment(corrections)
                 .environment(clipboard)
                 .environment(PermissionManager.shared)
+                .environment(windowState)
         }
         .modelContainer(mainContainer)
         .windowResizability(.contentMinSize)

@@ -25,17 +25,60 @@ struct MacRootView: View {
         }
     }
 
-    @State private var selected = Section.history
+    @Environment(MainWindowState.self) private var windowState
 
     var body: some View {
+        @Bindable var windowState = windowState
         NavigationSplitView {
-            List(Section.allCases, selection: $selected) { section in
-                Label(section.title, systemImage: section.systemImage)
-                    .tag(section)
+            VStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    if let appIcon = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath) as NSImage? {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .frame(width: 32, height: 32)
+                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    } else {
+                        Image(systemName: "waveform.badge.mic")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 32)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("OpenWhisper")
+                            .font(.headline)
+                        Text("Dictation")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
+
+                Divider()
+
+                List(Section.allCases, selection: $windowState.selectedSection) { section in
+                    Label(section.title, systemImage: section.systemImage)
+                        .tag(section)
+                }
+                .listStyle(.sidebar)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Type faster.")
+                        .font(.footnote.weight(.medium))
+                    Text("Dictate anywhere, private by default.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 240)
         } detail: {
-            switch selected {
+            switch windowState.selectedSection {
             case .history: HistoryView()
             case .settings: SettingsView()
             }

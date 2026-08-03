@@ -4,6 +4,7 @@ import OpenWhisperShared
 struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(SettingsStore.self) private var settings
+    @Environment(MainWindowState.self) private var windowState
     @AppStorage("settings.autoCopy") private var autoCopy = true
 
     var body: some View {
@@ -17,9 +18,15 @@ struct MenuBarView: View {
             Divider()
 
             Button {
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "openwhisper")
+                windowState.selectedSection = .history
+                showMainWindow()
+            } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+
+            Button {
+                windowState.selectedSection = .settings
+                showMainWindow()
             } label: {
                 Label("Settings…", systemImage: "gearshape")
             }
@@ -55,6 +62,12 @@ struct MenuBarView: View {
                 NSApplication.shared.terminate(nil)
             }
         }
+    }
+
+    private func showMainWindow() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: "openwhisper")
     }
 
     private func statusText(for phase: DictationOrchestrator.Phase) -> String {
