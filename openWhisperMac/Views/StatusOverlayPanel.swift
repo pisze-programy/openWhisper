@@ -109,7 +109,6 @@ struct StatusOverlayView: View {
             if case .listening = phase {
                 if let getSamples = StatusOverlayPanel.shared.getSamples {
                     LiveWaveformOverlay(getSamples: getSamples)
-                        .frame(maxWidth: .infinity)
                 } else {
                     Text("Listening")
                         .font(.system(size: 15, weight: .semibold))
@@ -185,15 +184,39 @@ private struct LiveWaveformOverlay: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.12)) { _ in
-            let bars = WaveformBars.bars(from: getSamples())
+            let samples = getSamples()
+            let raw = WaveformBars.bars(from: samples, count: 22)
+            let level = Self.level(of: samples)
             HStack(alignment: .center, spacing: 3) {
-                ForEach(0..<bars.count, id: \.self) { i in
+                ForEach(0..<raw.count, id: \.self) { i in
                     Capsule()
                         .fill(.white)
-                        .frame(width: 3, height: bars[i])
+                        .frame(width: 3, height: Self.barHeight(bar: raw[i], index: i, count: raw.count, level: level))
                 }
             }
-            .animation(.easeInOut(duration: 0.12), value: bars)
+            .frame(maxWidth: .infinity)
+            .frame(height: 18)
+            .animation(.easeInOut(duration: 0.12), value: raw)
         }
+    }
+
+    /// Global amplitude 0...1 for the visible window. Silence → low floor so the
+    /// whole wave stays flat and short; speech → rises and drives the bars.
+    private static func level(of samples: [Float]) -> CGFloat {
+        let window = Array(samples.suffix(4096))
+        guard !window.isEmpty else { return 0.05 }
+        var peak: Float = 0
+        for s in window {
+            let a = abs(s)
+            if a > peak { peak = a }
+        }
+        return max(min(CGFloat(peak) / 0.3, 1), 0.05)
+    }
+
+    /// Bar height = per-segment peak × mild edge envelope × global level.
+    /// Cap keeps it inside the pill; floor keeps a subtle idle wave in silence.
+    private static func barHeight(bar: CGFloat, index: Int, count: Int, level: CGFloat) -> CGFloat {
+        let envelope = 0.55 + 0.45 * CGFloat(sin(Double.pi * Double(index + 1) / Double(count + 1)))
+        return max(min(bar * envelope * level, 16), 2.5)
     }
 }
