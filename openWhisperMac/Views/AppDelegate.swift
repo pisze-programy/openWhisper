@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let pipeline = PostProcessingPipeline()
         let corrections = CorrectionsStore()
 
+        LaunchAtLoginService.apply(settings.launchAtLogin)
+
         guard let container = sharedContainer else {
             CriticalErrorAlert.show(
                 title: "Database not ready",

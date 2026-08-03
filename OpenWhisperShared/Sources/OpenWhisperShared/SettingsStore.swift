@@ -119,6 +119,13 @@ public final class SettingsStore {
         }
     }
 
+    /// Launch OpenWhisper automatically when the user logs in (macOS).
+    public var launchAtLogin: Bool {
+        didSet {
+            UserDefaults.standard.set(launchAtLogin, forKey: "settings.launchAtLogin")
+        }
+    }
+
     public static let maxRecordingDuration: TimeInterval = 600
 
     /// App-side read of the silence auto-stop toggle (default on).
@@ -170,5 +177,6 @@ public final class SettingsStore {
         formattingEnabled = defaults.object(forKey: "settings.formattingEnabled") as? Bool ?? true
         let styleRaw = defaults.string(forKey: "settings.formattingStyle")
         formattingStyle = styleRaw.flatMap(TranscriptionStyle.init(rawValue:)) ?? .formal
+        launchAtLogin = defaults.object(forKey: "settings.launchAtLogin") as? Bool ?? true
     }
 }

@@ -77,6 +77,20 @@ struct SettingsView: View {
                     )
                 }
 
+                SettingsSection("General") {
+                    ToggleRow(
+                        "Launch at login",
+                        description: "Starts OpenWhisper automatically when you log in to your Mac.",
+                        isOn: Binding(
+                            get: { settings.launchAtLogin },
+                            set: { newValue in
+                                settings.launchAtLogin = newValue
+                                LaunchAtLoginService.apply(newValue)
+                            }
+                        )
+                    )
+                }
+
                 SettingsSection("Permissions") {
                     PermissionStatusRow(
                         title: "Microphone",
