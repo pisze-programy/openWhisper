@@ -44,6 +44,7 @@ struct OpenWhisperMacApp: App {
                 .environment(settings)
                 .environment(toast)
                 .environment(windowState)
+                .environment(RecentsStore.shared)
         }
         .menuBarExtraStyle(.menu)
 

@@ -5,6 +5,7 @@ struct MenuBarView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(SettingsStore.self) private var settings
     @Environment(MainWindowState.self) private var windowState
+    @Environment(RecentsStore.self) private var recents
     @AppStorage("settings.autoCopy") private var autoCopy = true
 
     var body: some View {
@@ -43,11 +44,11 @@ struct MenuBarView: View {
             }
 
             Button {
-                MacClipboardService.shared.copy(RecentsStore.lastText)
+                MacClipboardService.shared.copy(recents.lastText)
             } label: {
-                Label("Copy Last Translation", systemImage: "doc.on.doc")
+                Label("Copy Last Transcription", systemImage: "doc.on.doc")
             }
-            .disabled(RecentsStore.lastText.isEmpty)
+            .disabled(recents.lastText.isEmpty)
 
             Divider()
 

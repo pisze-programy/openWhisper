@@ -218,7 +218,7 @@ struct SetupWindow: View {
         .padding(.horizontal, 32)
         .onAppear { isTextAreaFocused = true }
         .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
-            let last = RecentsStore.lastText
+            let last = RecentsStore.shared.lastText
             if !last.isEmpty, dictatedText != last {
                 dictatedText = last
             }

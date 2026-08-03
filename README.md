@@ -14,33 +14,63 @@
 
 ---
 
-## Screenshots & demos
+## Demos
 
-> GIFs coming soon. Each section below has a placeholder — drop a recording there once captured.
+### macOS — dictation & formatting
 
-### macOS — dictation overlay
+<p align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/Rec-copy-paste.gif" width="100%" alt="Dictation demo">
+        <br><em>Hold right ⌘+⌥, speak, release — glass overlay with a live waveform, then "Copied".</em>
+      </td>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/STT-formatting-style.gif" width="100%" alt="Formatting style demo">
+        <br><em>Hold right ⌥ and tap right ⇧ — the overlay cycles formatting styles with a green checkmark.</em>
+      </td>
+    </tr>
+  </table>
+</p>
 
-![macOS dictation overlay in action](docs/gifs/macos-overlay.gif)
+### macOS — menu bar
 
-Press the global hotkey (right **⌘+⌥**), speak, release. A glass overlay shows the active app and a **live waveform** of your voice; the transcript is polished and pasted straight into whatever you're typing in.
+<p align="center">
+  <img src="docs/assets/macos/menu-bar.jpeg" width="520" alt="OpenWhisper menu bar">
+</p>
+
+Lives in the menu bar — style picker, copy last transcription, history and settings one click away.
 
 ### macOS — main window
 
-![macOS main window: History + Settings](docs/gifs/macos-window.gif)
+<p align="center">
+  <table>
+    <tr>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/settings.jpeg" width="100%" alt="Settings">
+        <br><em>Settings — audio, history, permissions, launch at login.</em>
+      </td>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/history.jpg" width="100%" alt="History">
+        <br><em>History — every transcription grouped by day, tap to copy.</em>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/formatting-styles.jpeg" width="100%" alt="Formatting">
+        <br><em>Formatting — pick a rewrite style, or None for a fast, local transcript.</em>
+      </td>
+      <td align="center" width="50%">
+        <img src="docs/assets/macos/dication.jpeg" width="100%" alt="Dictation">
+        <br><em>Dictation — speech model, auto-copy/paste, OpenRouter API key.</em>
+      </td>
+    </tr>
+  </table>
+</p>
 
-A timeline of every transcription grouped by day, and a full settings screen with formatting styles, permissions, API key and launch-at-login.
+### iOS
 
-### iOS — on-device dictation
-
-![iOS dictation](docs/gifs/ios-dictation.gif)
-
-Tap the mic, talk, done. Same Parakeet engine, same private promise, on your iPhone.
-
-### iOS — onboarding
-
-![iOS onboarding](docs/gifs/ios-onboarding.gif)
-
-Three-step setup: intro, one-time model download, privacy promise.
+iOS demos coming soon.
 
 ---
 

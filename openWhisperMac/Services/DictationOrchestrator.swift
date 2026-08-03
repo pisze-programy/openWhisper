@@ -178,7 +178,7 @@ final class DictationOrchestrator {
                     : nil
             )
             text = processed.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            RecentsStore.set(text)
+            RecentsStore.shared.set(text)
 
             if settings.autoCopy {
                 clipboard.copy(text)

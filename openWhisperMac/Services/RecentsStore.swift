@@ -1,12 +1,16 @@
 import Foundation
+import Observation
 
-/// In-memory holder for the most recent transcription, used by the menu bar
-/// "Copy Last Translation" action.
-@MainActor
-enum RecentsStore {
-    private(set) static var lastText = ""
+/// Holds the most recent transcription for the menu bar "Copy Last
+/// Transcription" action. Observable so the menu bar item's enabled state
+/// refreshes whenever a new transcription lands.
+@MainActor @Observable
+final class RecentsStore {
+    static let shared = RecentsStore()
 
-    static func set(_ text: String) {
+    private(set) var lastText = ""
+
+    func set(_ text: String) {
         lastText = text
     }
 }

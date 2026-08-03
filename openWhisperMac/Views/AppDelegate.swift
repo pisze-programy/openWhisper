@@ -51,6 +51,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         self.orchestrator = orchestrator
 
+        // Seed "Copy Last Translation" from persisted history so the menu bar
+        // action works right after launch, before any new dictation this session.
+        var recentDescriptor = FetchDescriptor<TranscriptionItem>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        recentDescriptor.fetchLimit = 1
+        if let lastText = try? container.mainContext.fetch(recentDescriptor).first?.text {
+            RecentsStore.shared.set(lastText)
+        }
+
         let sleepObserver = SystemSleepObserver(recorder: recorder, orchestrator: orchestrator)
         sleepObserver.start()
         self.sleepObserver = sleepObserver
