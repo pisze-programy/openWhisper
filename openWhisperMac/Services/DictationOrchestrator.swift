@@ -36,6 +36,10 @@ final class DictationOrchestrator {
 
     private var targetAppProcessID: pid_t?
     private var activeTask: Task<Void, Never>?
+    /// Formatting style captured when recording started. A style change while
+    /// this recording is in flight must not affect it — the current transcript
+    /// keeps the style it had at the start; the next recording uses the new one.
+    private var recordingStyle: TranscriptionStyle?
 
     init(
         recorder: MacRecorder,
@@ -68,6 +72,7 @@ final class DictationOrchestrator {
 
         targetAppProcessID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         StatusOverlayPanel.shared.activeAppIcon = NSWorkspace.shared.frontmostApplication?.icon
+        recordingStyle = settings.formattingStyle
 
         activeTask = Task { [weak self] in
             guard let self else { return }
@@ -101,6 +106,7 @@ final class DictationOrchestrator {
         recorder.cancel()
         ducking.restore()
         targetAppProcessID = nil
+        recordingStyle = nil
         activeTask?.cancel()
         activeTask = nil
         setPhase(.idle)
@@ -111,6 +117,8 @@ final class DictationOrchestrator {
     private func finish(samples: [Float]) async {
         let duration = Double(samples.count) / 16_000.0
         let peak = Self.peakLevel(of: samples)
+        let style = recordingStyle ?? settings.formattingStyle
+        recordingStyle = nil
 
         do {
             try await transcription.waitForModelReady()
@@ -158,22 +166,22 @@ final class DictationOrchestrator {
                 return
             }
 
-            if settings.formattingEnabled {
+            if style != .none {
                 setPhase(.polishing)
             }
             let context = PostProcessingPipeline.Context(
                 languageCode: settings.languageCode,
                 engineId: "fluidaudio",
-                formattingStyle: settings.formattingStyle,
-                formattingEnabled: settings.formattingEnabled
+                formattingStyle: style,
+                formattingEnabled: style != .none
             )
             let processed = try await pipeline.process(
                 text: text,
                 context: context,
                 corrections: corrections,
-                llmHandler: settings.formattingEnabled
-                    ? { [settings, formatting = TextFormattingService()] text in
-                        await formatting.format(text: text, style: settings.formattingStyle)
+                llmHandler: style != .none
+                    ? { [style, formatting = TextFormattingService()] text in
+                        await formatting.format(text: text, style: style)
                     }
                     : nil
             )

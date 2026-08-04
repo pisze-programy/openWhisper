@@ -8,10 +8,10 @@ struct OpenWhisperMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.openWindow) private var openWindow
 
-    @State private var settings = SettingsStore()
+    @State private var settings = SettingsStore.shared
     @State private var modelDownload = ModelDownloadManager.shared
     @State private var toast = ToastCenter()
-    @State private var corrections = CorrectionsStore()
+    @State private var corrections = CorrectionsStore.shared
     @State private var clipboard = MacClipboardService.shared
     @State private var windowState = MainWindowState()
     @State private var container: ModelContainer?

@@ -11,11 +11,21 @@ public enum PromptComposer {
         public var languageCode: String?
         public var fineTuning: String?
         public var outputFormat: String?
+        /// When set, the prompt additionally requires the result to be entirely
+        /// in `targetLanguageCode` (translation). Overrides the style's
+        /// "respond in the same language" instruction.
+        public var targetLanguageCode: String?
 
-        public init(languageCode: String? = nil, fineTuning: String? = nil, outputFormat: String? = nil) {
+        public init(
+            languageCode: String? = nil,
+            fineTuning: String? = nil,
+            outputFormat: String? = nil,
+            targetLanguageCode: String? = nil
+        ) {
             self.languageCode = languageCode
             self.fineTuning = fineTuning
             self.outputFormat = outputFormat
+            self.targetLanguageCode = targetLanguageCode
         }
     }
 
@@ -26,7 +36,36 @@ public enum PromptComposer {
             boundary: true,
             languageCode: options.languageCode,
             fineTuning: options.fineTuning,
-            outputFormat: options.outputFormat
+            outputFormat: options.outputFormat,
+            targetLanguageCode: options.targetLanguageCode
+        )
+    }
+
+    /// Builds the system prompt for a translate-only call (used when the NONE
+    /// style is combined with translation): keep the speaker's meaning, do not
+    /// reformat, rewrite or summarize.
+    public static func translatePrompt(
+        sourceLanguageCode: String? = nil,
+        targetLanguageCode: String?,
+        options: Options = Options()
+    ) -> String {
+        let target = trimmed(targetLanguageCode) ?? ""
+        let task = """
+        Translate the following dictated text into \(target.isEmpty ? "the requested language" : target).
+        Do the following:
+        - Produce a faithful translation that keeps the speaker's meaning, tone and any facts.
+        - Do NOT reformat, rewrite, condense, summarize, or improve the wording beyond what a translation requires.
+        - Keep proper names, numbers, dates, and quoted terms where translation is not appropriate.
+        - If the source text is already in the target language, return it unchanged.
+        - Output only the translation, no explanations.
+        """
+        return assemble(
+            task: task,
+            boundary: true,
+            languageCode: sourceLanguageCode,
+            fineTuning: options.fineTuning,
+            outputFormat: options.outputFormat,
+            targetLanguageCode: targetLanguageCode
         )
     }
 
@@ -42,7 +81,8 @@ public enum PromptComposer {
             boundary: true,
             languageCode: languageCode,
             fineTuning: fineTuning,
-            outputFormat: outputFormat
+            outputFormat: outputFormat,
+            targetLanguageCode: nil
         )
     }
 
@@ -51,7 +91,8 @@ public enum PromptComposer {
         boundary: Bool,
         languageCode: String?,
         fineTuning: String?,
-        outputFormat: String?
+        outputFormat: String?,
+        targetLanguageCode: String?
     ) -> String {
         var parts: [String] = [task]
 
@@ -78,6 +119,11 @@ public enum PromptComposer {
             } else {
                 parts.append("Output requirements: return the result as \(outputFormat).")
             }
+        }
+
+        if let targetLanguageCode = trimmed(targetLanguageCode) {
+            parts.append("Translate the source text into \(targetLanguageCode).")
+            parts.append("The entire output must be in \(targetLanguageCode), overriding any instruction to respond in the source language.")
         }
 
         return parts.joined(separator: "\n\n")

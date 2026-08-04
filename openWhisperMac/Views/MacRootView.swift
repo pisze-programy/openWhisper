@@ -8,6 +8,7 @@ struct MacRootView: View {
         case history
         case formatting
         case dictation
+        case translate
         case settings
 
         var id: String { rawValue }
@@ -17,6 +18,7 @@ struct MacRootView: View {
             case .history: return "History"
             case .formatting: return "Formatting"
             case .dictation: return "Dictation"
+            case .translate: return "Translate"
             case .settings: return "Settings"
             }
         }
@@ -26,6 +28,7 @@ struct MacRootView: View {
             case .history: return "Past transcriptions"
             case .formatting: return "AI style and rewrite"
             case .dictation: return "Model, recording, API"
+            case .translate: return "From/To languages, shortcuts"
             case .settings: return "Audio, history, permissions"
             }
         }
@@ -35,12 +38,13 @@ struct MacRootView: View {
             case .history: return "clock.arrow.circlepath"
             case .formatting: return "wand.and.stars"
             case .dictation: return "waveform.badge.mic"
+            case .translate: return "translate"
             case .settings: return "gearshape"
             }
         }
     }
 
-    private static var mainSections: [SidebarSection] { [.history, .formatting, .dictation] }
+    private static var mainSections: [SidebarSection] { [.history, .formatting, .dictation, .translate] }
     private static var pinnedSections: [SidebarSection] { [.settings] }
 
     @Environment(MainWindowState.self) private var windowState
@@ -122,6 +126,7 @@ struct MacRootView: View {
             case .history: HistoryView()
             case .formatting: FormattingView()
             case .dictation: DictationView()
+            case .translate: TranslateView()
             case .settings: SettingsView()
             }
         }

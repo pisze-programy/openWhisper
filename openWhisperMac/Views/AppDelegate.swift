@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var current: AppDelegate?
 
     private(set) var orchestrator: DictationOrchestrator?
+    private(set) var reformat: ReformatOrchestrator?
     var appOpenWindow: OpenWindowAction?
     var sharedContainer: ModelContainer?
 
@@ -22,9 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PermissionManager.shared.refresh()
         ModelDownloadManager.shared.refreshStatus()
 
-        let settings = SettingsStore()
+        let settings = SettingsStore.shared
         let pipeline = PostProcessingPipeline()
-        let corrections = CorrectionsStore()
+        let corrections = CorrectionsStore.shared
 
         LaunchAtLoginService.apply(settings.launchAtLogin)
 
@@ -50,6 +51,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modelContext: container.mainContext
         )
         self.orchestrator = orchestrator
+
+        let reformat = ReformatOrchestrator(
+            settings: settings,
+            pipeline: pipeline,
+            insertion: TextInsertionService.shared,
+            clipboard: MacClipboardService.shared,
+            corrections: corrections,
+            sounds: FeedbackSoundService.shared
+        )
+        self.reformat = reformat
 
         // Seed "Copy Last Translation" from persisted history so the menu bar
         // action works right after launch, before any new dictation this session.
@@ -79,7 +90,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         HotkeyManager.shared.requireSecondEscapeToCancel = settings.requireSecondEscapeToCancel
-        HotkeyManager.shared.onRecordStart = { orchestrator.startRecording() }
+        HotkeyManager.shared.onRecordStart = {
+            reformat.cancel()
+            orchestrator.startRecording()
+        }
         HotkeyManager.shared.onRecordStop = { orchestrator.stopAndTranscribe() }
         HotkeyManager.shared.onCancel = { orchestrator.cancel() }
         HotkeyManager.shared.onCycleStyle = {
@@ -92,6 +106,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotkeyManager.shared.onStyleCycleEnd = {
             settings.persistFormattingStyle()
             StatusOverlayPanel.shared.confirmStyleSelection()
+        }
+        HotkeyManager.shared.onTranslateReformat = {
+            // Never run reformat while a recording is in flight.
+            guard orchestrator.phase == .idle else { return }
+            reformat.run()
+        }
+        HotkeyManager.shared.onSwapTranslateDirection = {
+            guard orchestrator.phase == .idle else { return }
+            settings.swapTranslateDirection()
+            let fromName = settings.translateSourceCode.flatMap { Language.language(for: $0)?.name } ?? "Auto"
+            let toName = settings.translateTargetCode.flatMap { Language.language(for: $0)?.name } ?? "Off"
+            StatusOverlayPanel.shared.showTranslateSwap(from: fromName, to: toName) {
+                FeedbackSoundService.shared.play(.styleChanged)
+            }
         }
         HotkeyManager.shared.start()
 
@@ -116,6 +144,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         sleepObserver?.stop()
         orchestrator?.cancel()
+        reformat?.cancel()
         AudioDuckingService.shared.restore()
     }
 }

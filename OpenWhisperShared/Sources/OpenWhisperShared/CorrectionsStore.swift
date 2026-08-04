@@ -25,6 +25,10 @@ public struct Correction: Identifiable, Codable, Equatable {
 
 @MainActor @Observable
 public final class CorrectionsStore {
+    /// Single shared instance so the UI that edits corrections and the
+    /// dictation pipeline that applies them always see the same dictionary.
+    public static let shared = CorrectionsStore()
+
     public private(set) var corrections: [Correction] = []
 
     private let defaults = UserDefaults.standard

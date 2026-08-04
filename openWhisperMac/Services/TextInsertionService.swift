@@ -41,6 +41,24 @@ final class TextInsertionService {
         .init("com.openwhisper.SpeechTranscription"),
     ]
 
+    /// Roles where a synthetic paste reliably replaces the selection in place.
+    /// Web areas and other read-only elements fall back to the clipboard.
+    private static let pasteEditableRoles: Set<String> = [
+        kAXTextFieldRole, kAXTextAreaRole, kAXComboBoxRole, "AXSearchField"
+    ]
+
+    /// What the reformat hotkey captured from the focused element.
+    struct CapturedSelection {
+        /// Text to process: the selection, or the whole field when editable with
+        /// no selection.
+        let text: String
+        let hasSelection: Bool
+        /// Whether the text lives in an editable input we can replace in place.
+        let editable: Bool
+        /// The focused element, present only when `editable`.
+        let element: AXUIElement?
+    }
+
     var isAccessibilityGranted: Bool { AXIsProcessTrusted() }
 
     func requestAccessibilityPermission() {
@@ -129,6 +147,90 @@ final class TextInsertionService {
     }
 
     // MARK: - AX
+
+    /// Captures the text the reformat hotkey should process from the focused
+    /// element. Returns the selection when present; for an editable field with
+    /// no selection, the whole field value. Returns nil when there is nothing to
+    /// process (no focused element, empty text, or a password field that AX does
+    /// not expose).
+    func captureActiveSelection() -> CapturedSelection? {
+        guard let element = systemFocusedElement() else { return nil }
+
+        var valueValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueValue)
+        var selectedValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedValue)
+        var rangeValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeValue)
+
+        let value = (valueValue as? String) ?? ""
+        let selectedText = (selectedValue as? String) ?? ""
+        let range = nsRange(from: rangeValue)
+        let hasSelection = (range?.length ?? 0) > 0
+        let editable = isEditableInput(element)
+
+        let text: String
+        if editable, !hasSelection, !value.isEmpty {
+            text = value
+        } else {
+            text = selectedText
+        }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return CapturedSelection(
+            text: trimmed,
+            hasSelection: hasSelection,
+            editable: editable,
+            element: editable ? element : nil
+        )
+    }
+
+    /// Replaces the captured text in place with `text`. For a selection the
+    /// existing paste path replaces it; for a whole-field capture the field is
+    /// selected all first. Returns whether the paste was verified.
+    @discardableResult
+    func replaceFocusedText(
+        _ text: String,
+        selection: CapturedSelection,
+        outputFormat: String? = nil,
+        preserveClipboard: Bool = false
+    ) async -> Bool {
+        guard selection.editable, let element = selection.element else { return false }
+        if !selection.hasSelection {
+            _ = selectAll(element)
+        }
+        return await insertText(text, outputFormat: outputFormat, preserveClipboard: preserveClipboard)
+    }
+
+    private func systemFocusedElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focused: AnyObject?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+              let focused else { return nil }
+        return focused as! AXUIElement
+    }
+
+    /// Whether `element` is an editable text input we can replace with a paste.
+    private func isEditableInput(_ element: AXUIElement) -> Bool {
+        var roleValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue)
+        if let role = roleValue as? String, Self.pasteEditableRoles.contains(role) { return true }
+        var editableValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXIsEditableAttribute as CFString, &editableValue)
+        return (editableValue as? Bool) == true
+    }
+
+    /// Selects the entire value of `element` via AX so a subsequent paste
+    /// replaces the whole field. Returns whether the write was accepted.
+    private func selectAll(_ element: AXUIElement) -> Bool {
+        var valueValue: AnyObject?
+        AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueValue)
+        guard let value = valueValue as? String else { return false }
+        let length = (value as NSString).length
+        var range = CFRange(location: 0, length: length)
+        guard let axRange = AXValueCreate(.cfRange, &range) else { return false }
+        return AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, axRange) == .success
+    }
 
     private func focusedTextElement() -> AXUIElement? {
         let systemWide = AXUIElementCreateSystemWide()

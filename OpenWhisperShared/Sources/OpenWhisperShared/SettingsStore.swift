@@ -4,6 +4,12 @@ import OpenWhisperShared
 
 @MainActor @Observable
 public final class SettingsStore {
+    /// Single shared instance. macOS wires the SwiftUI app and the
+    /// AppDelegate/orchestrator to the same object so settings changed in the
+    /// UI (menu bar, Formatting, Settings) take effect immediately for
+    /// dictation instead of living on a second, stale instance.
+    public static let shared = SettingsStore()
+
     public var computeUnits: ParakeetComputeUnits {
         didSet {
             UserDefaults.standard.set(computeUnits.rawValue, forKey: "settings.computeUnits")
@@ -137,6 +143,35 @@ public final class SettingsStore {
         UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
     }
 
+    /// Source language for the translate hotkey (left ⌘+⌥). nil = auto-detect.
+    public var translateSourceCode: String? {
+        didSet {
+            UserDefaults.standard.set(translateSourceCode, forKey: "settings.translateSourceCode")
+        }
+    }
+
+    /// Target language for the translate hotkey. nil = translation disabled
+    /// (the hotkey reformats only).
+    public var translateTargetCode: String? {
+        didSet {
+            UserDefaults.standard.set(translateTargetCode, forKey: "settings.translateTargetCode")
+        }
+    }
+
+    /// Whether the translate hotkey performs an actual translation (both
+    /// languages set and different). When false, the hotkey reformats only.
+    public var isTranslationActive: Bool {
+        guard let source = translateSourceCode, let target = translateTargetCode else { return false }
+        return source != target
+    }
+
+    /// Swaps the FROM/TO translation pair. No-op when either side is unset.
+    public func swapTranslateDirection() {
+        guard let source = translateSourceCode, let target = translateTargetCode else { return }
+        translateSourceCode = target
+        translateTargetCode = source
+    }
+
     public var onboardingCompleted: Bool {
         didSet {
             UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
@@ -205,5 +240,7 @@ public final class SettingsStore {
         }
         formattingStyle = style
         launchAtLogin = defaults.object(forKey: "settings.launchAtLogin") as? Bool ?? true
+        translateSourceCode = defaults.string(forKey: "settings.translateSourceCode") ?? "pl"
+        translateTargetCode = defaults.string(forKey: "settings.translateTargetCode") ?? "en"
     }
 }

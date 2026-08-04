@@ -11,6 +11,7 @@ final class StatusOverlayPanel {
 
     private static let recordingPanelSize = NSSize(width: 280, height: 52)
     private static let stylePanelSize = NSSize(width: 380, height: 52)
+    private static let messagePanelWidth: CGFloat = 380
 
     private var panel: NSPanel?
     private var hostingView: NSHostingView<StatusOverlayView>?
@@ -19,20 +20,62 @@ final class StatusOverlayPanel {
     private var styleTask: Task<Void, Never>?
     private var currentStyle: TranscriptionStyle = .none
     private var currentOnConfirm: (() -> Void)?
+    private var translatePairSource: String?
+    private var translatePairTarget: String?
+    private var messageHostingView: NSHostingView<MessageOverlayView>?
+    private var messageGeneration = 0
+    private var messageTask: Task<Void, Never>?
+    private var messageHeight: CGFloat = 52
+    private var translatePairHostingView: NSHostingView<TranslatePairOverlayView>?
 
     private init() {}
 
-    func show(phase: DictationOrchestrator.Phase) {
+    func show(phase: DictationOrchestrator.Phase, title: String? = nil) {
         if panel == nil {
             createPanel()
         }
         cancelStyleOverlay()
-        hostingView?.rootView = StatusOverlayView(phase: phase, appIcon: activeAppIcon)
+        cancelMessage()
+        hostingView?.rootView = StatusOverlayView(phase: phase, appIcon: activeAppIcon, titleOverride: title)
         if panel?.isVisible != true {
             animateShow(size: Self.recordingPanelSize)
         } else {
             positionAndShow(size: Self.recordingPanelSize)
             panel?.alphaValue = 1
+        }
+    }
+
+    /// Shows a transient message (errors, hints, "No text selected", done
+    /// states) that auto-hides after `duration` seconds.
+    func showMessage(
+        title: String,
+        detail: String? = nil,
+        icon: OverlayIcon = .info,
+        tint: Color = .white,
+        duration: TimeInterval = 1.6
+    ) {
+        messageGeneration += 1
+        let generation = messageGeneration
+        messageTask?.cancel()
+        if panel == nil {
+            createPanel()
+        }
+        cancelStyleOverlay()
+        hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
+        messageHostingView?.rootView = MessageOverlayView(title: title, detail: detail, icon: icon, tint: tint)
+        messageHostingView?.isHidden = false
+        messageHeight = detail == nil ? 52 : 68
+        let size = NSSize(width: Self.messagePanelWidth, height: messageHeight)
+        if panel?.isVisible != true {
+            animateShow(size: size)
+        } else {
+            positionAndShow(size: size)
+            panel?.alphaValue = 1
+        }
+        messageTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(duration * 1000))
+            guard let self, self.messageGeneration == generation, !Task.isCancelled else { return }
+            self.hide()
         }
     }
 
@@ -49,6 +92,7 @@ final class StatusOverlayPanel {
         if panel == nil {
             createPanel()
         }
+        cancelMessage()
         hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
         styleHostingView?.rootView = StyleOverlayView(style: style, confirmed: false)
         styleHostingView?.isHidden = false
@@ -59,6 +103,76 @@ final class StatusOverlayPanel {
             panel?.alphaValue = 1
         }
         scheduleStyleConfirmation(after: 900, generation: generation)
+    }
+
+    /// Shows the translation pair (FROM → TO) when the direction is swapped
+    /// with the left ⌘+⇧ hotkey, confirming with a checkmark and a sound before
+    /// closing.
+    func showTranslateSwap(from: String, to: String, onConfirm: (() -> Void)? = nil) {
+        showTranslatePair(from: from, to: to, confirmed: false, onConfirm: onConfirm, delayMillis: 800)
+    }
+
+    func confirmTranslateSwap(from: String, to: String, onConfirm: (() -> Void)? = nil) {
+        showTranslatePair(from: from, to: to, confirmed: true, onConfirm: onConfirm, delayMillis: 0)
+    }
+
+    private func showTranslatePair(
+        from: String,
+        to: String,
+        confirmed: Bool,
+        onConfirm: (() -> Void)?,
+        delayMillis: Int
+    ) {
+        styleGeneration += 1
+        let generation = styleGeneration
+        currentOnConfirm = onConfirm
+        translatePairSource = from
+        translatePairTarget = to
+        styleTask?.cancel()
+        if panel == nil {
+            createPanel()
+        }
+        cancelMessage()
+        styleHostingView?.isHidden = true
+        hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
+        translatePairHostingView?.rootView = TranslatePairOverlayView(from: from, to: to, confirmed: confirmed)
+        translatePairHostingView?.isHidden = false
+        if panel?.isVisible != true {
+            animateShow(size: Self.stylePanelSize)
+        } else {
+            positionAndShow(size: Self.stylePanelSize)
+            panel?.alphaValue = 1
+        }
+        if confirmed {
+            confirmCurrentTranslatePair(generation: generation)
+        } else {
+            scheduleTranslatePairConfirmation(after: delayMillis, generation: generation)
+        }
+    }
+
+    private func scheduleTranslatePairConfirmation(after delayMillis: Int, generation: Int) {
+        styleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(delayMillis))
+            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.translatePairHostingView?.rootView = TranslatePairOverlayView(
+                from: self.translatePairSource ?? "",
+                to: self.translatePairTarget ?? "",
+                confirmed: true
+            )
+            self.currentOnConfirm?()
+            try? await Task.sleep(for: .milliseconds(450))
+            guard self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.hide()
+        }
+    }
+
+    private func confirmCurrentTranslatePair(generation: Int) {
+        currentOnConfirm?()
+        styleTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
+            self.hide()
+        }
     }
 
     /// Called when the style-switch hotkey is released after cycling: skip
@@ -98,6 +212,15 @@ final class StatusOverlayPanel {
         styleTask = nil
         styleHostingView?.rootView = StyleOverlayView(style: .none, confirmed: false)
         styleHostingView?.isHidden = true
+        translatePairHostingView?.isHidden = true
+    }
+
+    /// Removes a pending message overlay.
+    private func cancelMessage() {
+        messageGeneration += 1
+        messageTask?.cancel()
+        messageTask = nil
+        messageHostingView?.isHidden = true
     }
 
     func hide() {
@@ -135,11 +258,25 @@ final class StatusOverlayPanel {
         styleHostingView.isHidden = true
         wrapper.addSubview(styleHostingView)
 
+        let messageHostingView = NSHostingView(rootView: MessageOverlayView(title: "", detail: nil, icon: .info, tint: .white))
+        messageHostingView.frame = wrapper.bounds
+        messageHostingView.autoresizingMask = [.width, .height]
+        messageHostingView.isHidden = true
+        wrapper.addSubview(messageHostingView)
+
+        let translatePairHostingView = NSHostingView(rootView: TranslatePairOverlayView(from: "", to: "", confirmed: false))
+        translatePairHostingView.frame = wrapper.bounds
+        translatePairHostingView.autoresizingMask = [.width, .height]
+        translatePairHostingView.isHidden = true
+        wrapper.addSubview(translatePairHostingView)
+
         panel.contentView = wrapper
         panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         self.panel = panel
         self.hostingView = hostingView
         self.styleHostingView = styleHostingView
+        self.messageHostingView = messageHostingView
+        self.translatePairHostingView = translatePairHostingView
     }
 
     private func positionAndShow(size: NSSize) {
@@ -178,6 +315,13 @@ final class StatusOverlayPanel {
 struct StatusOverlayView: View {
     let phase: DictationOrchestrator.Phase
     let appIcon: NSImage?
+    var titleOverride: String?
+
+    init(phase: DictationOrchestrator.Phase, appIcon: NSImage?, titleOverride: String? = nil) {
+        self.phase = phase
+        self.appIcon = appIcon
+        self.titleOverride = titleOverride
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -190,7 +334,7 @@ struct StatusOverlayView: View {
                 Spacer().frame(width: 12)
             }
 
-            if case .listening = phase {
+            if case .listening = phase, titleOverride == nil {
                 if let getSamples = StatusOverlayPanel.shared.getSamples {
                     LiveWaveformOverlay(getSamples: getSamples)
                 } else {
@@ -232,6 +376,7 @@ struct StatusOverlayView: View {
     }
 
     private var title: String {
+        if let titleOverride, !titleOverride.isEmpty { return titleOverride }
         switch phase {
         case .idle: return ""
         case .listening: return "Listening"
@@ -328,6 +473,117 @@ private struct StyleOverlayView: View {
             Spacer(minLength: 12)
 
             Image(systemName: confirmed ? "checkmark.circle.fill" : style.systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(confirmed ? .green : .white)
+                .frame(width: 22)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .compositingGroup()
+        .background {
+            ZStack {
+                Capsule()
+                    .fill(.black.opacity(0.3))
+                    .blur(radius: 16)
+                    .offset(y: 3)
+
+                Capsule()
+                    .fill(.regularMaterial)
+            }
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        }
+    }
+}
+
+/// Icon used by transient message overlays.
+enum OverlayIcon {
+    case check
+    case warning
+    case info
+
+    var systemImage: String {
+        switch self {
+        case .check: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .info: return "info.circle"
+        }
+    }
+}
+
+/// Transient message (error, hint, result state). Pure presentation — the
+/// panel owns the timing and swaps this view in and out.
+private struct MessageOverlayView: View {
+    let title: String
+    let detail: String?
+    let icon: OverlayIcon
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(1)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(2)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 12)
+
+            Image(systemName: icon.systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 22)
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .compositingGroup()
+        .background {
+            ZStack {
+                Capsule()
+                    .fill(.black.opacity(0.3))
+                    .blur(radius: 16)
+                    .offset(y: 3)
+
+                Capsule()
+                    .fill(.regularMaterial)
+            }
+        }
+        .overlay {
+            Capsule()
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        }
+    }
+}
+
+/// Confirmation shown when the translation direction is swapped with the left
+/// ⌘+⇧ hotkey: a single line "FROM → TO", morphing into a green checkmark
+/// before closing.
+private struct TranslatePairOverlayView: View {
+    let from: String
+    let to: String
+    let confirmed: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text("\(from.isEmpty ? "Auto" : from) → \(to.isEmpty ? "Off" : to)")
+                .font(.system(size: 15, weight: .semibold))
+                .lineLimit(1)
+
+            Spacer(minLength: 12)
+
+            Image(systemName: confirmed ? "checkmark.circle.fill" : "arrow.triangle.2.circlepath")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(confirmed ? .green : .white)
                 .frame(width: 22)

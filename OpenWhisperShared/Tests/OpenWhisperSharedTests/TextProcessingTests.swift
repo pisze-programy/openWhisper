@@ -31,6 +31,34 @@ final class TextProcessingTests: XCTestCase {
         XCTAssertFalse(prompt.isEmpty)
     }
 
+    func testFormatPromptWithTranslationOverridesSourceLanguage() {
+        let options = PromptComposer.Options(
+            languageCode: "pl",
+            targetLanguageCode: "en"
+        )
+        let prompt = PromptComposer.formatPrompt(style: .formal, options: options)
+        XCTAssertTrue(prompt.contains("Detected source language: pl"))
+        XCTAssertTrue(prompt.contains("Translate the source text into en"))
+        XCTAssertTrue(prompt.contains("overriding any instruction to respond in the source language"))
+    }
+
+    func testTranslatePromptIsTranslateOnly() {
+        let prompt = PromptComposer.translatePrompt(
+            sourceLanguageCode: "pl",
+            targetLanguageCode: "en"
+        )
+        XCTAssertTrue(prompt.contains("Translate the following dictated text into en"))
+        XCTAssertTrue(prompt.contains("faithful translation"))
+        XCTAssertFalse(prompt.contains("Reformulate"))
+        XCTAssertFalse(prompt.contains("polish"))
+        XCTAssertTrue(prompt.contains("source text to transform"))
+    }
+
+    func testTranslatePromptNoTargetFallback() {
+        let prompt = PromptComposer.translatePrompt(targetLanguageCode: nil)
+        XCTAssertTrue(prompt.contains("Translate the following dictated text into the requested language"))
+    }
+
     func testNumberNormalizationEnglish() {
         XCTAssertEqual(NumberWordNormalizer.normalize(text: "twenty five", language: "en"), "25")
         XCTAssertEqual(NumberWordNormalizer.normalize(text: "one hundred and five", language: "en"), "105")
@@ -109,5 +137,32 @@ final class TextProcessingTests: XCTestCase {
             corrections: nil
         )
         XCTAssertTrue(result.text.contains("25"))
+    }
+
+    @MainActor
+    func testTranslateDirectionSwap() {
+        let settings = SettingsStore()
+        settings.translateSourceCode = "pl"
+        settings.translateTargetCode = "en"
+        XCTAssertTrue(settings.isTranslationActive)
+
+        settings.swapTranslateDirection()
+        XCTAssertEqual(settings.translateSourceCode, "en")
+        XCTAssertEqual(settings.translateTargetCode, "pl")
+    }
+
+    @MainActor
+    func testTranslateInactiveWhenLanguagesMatchOrUnset() {
+        let settings = SettingsStore()
+        settings.translateSourceCode = "pl"
+        settings.translateTargetCode = "pl"
+        XCTAssertFalse(settings.isTranslationActive)
+
+        settings.translateTargetCode = nil
+        XCTAssertFalse(settings.isTranslationActive)
+
+        settings.swapTranslateDirection()
+        XCTAssertEqual(settings.translateSourceCode, "pl")
+        XCTAssertNil(settings.translateTargetCode)
     }
 }

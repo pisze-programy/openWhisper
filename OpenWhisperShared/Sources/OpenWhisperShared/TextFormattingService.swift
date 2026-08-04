@@ -36,6 +36,58 @@ public final class TextFormattingService {
         await perform(text: text, style: style)
     }
 
+    /// Rewrites an existing note in `style` AND translates it into
+    /// `targetLanguageCode`, in a single request. Returns nil on failure so the
+    /// caller keeps the original text.
+    public func reformatAndTranslate(
+        text: String,
+        style: TranscriptionStyle,
+        sourceLanguageCode: String?,
+        targetLanguageCode: String?
+    ) async -> String? {
+        let apiKey = Self.storedApiKey
+        guard !apiKey.isEmpty, !text.isEmpty else { return nil }
+        let client = OpenRouterFormattingClient(apiKey: apiKey)
+        do {
+            let formatted = try await client.format(
+                text: text,
+                style: style,
+                sourceLanguageCode: sourceLanguageCode,
+                targetLanguageCode: targetLanguageCode
+            )
+            let trimmed = formatted.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        } catch {
+            logger.error("AI formatting+translation failed (\(error.localizedDescription, privacy: .public))")
+            return nil
+        }
+    }
+
+    /// Translates an existing note without any style rewriting (used when the
+    /// selected style is NONE). Returns nil on failure so the caller keeps the
+    /// original text.
+    public func translateOnly(
+        text: String,
+        sourceLanguageCode: String?,
+        targetLanguageCode: String?
+    ) async -> String? {
+        let apiKey = Self.storedApiKey
+        guard !apiKey.isEmpty, !text.isEmpty else { return nil }
+        let client = OpenRouterFormattingClient(apiKey: apiKey)
+        do {
+            let translated = try await client.translate(
+                text: text,
+                sourceLanguageCode: sourceLanguageCode,
+                targetLanguageCode: targetLanguageCode
+            )
+            let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        } catch {
+            logger.error("AI translation failed (\(error.localizedDescription, privacy: .public))")
+            return nil
+        }
+    }
+
     private func perform(text: String, style: TranscriptionStyle) async -> String? {
         let apiKey = Self.storedApiKey
         guard !apiKey.isEmpty, !text.isEmpty else { return nil }

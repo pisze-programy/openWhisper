@@ -22,6 +22,57 @@ public struct OpenRouterFormattingClient: Sendable {
     /// boundary so the model treats it as source text, and the response is
     /// sanitized of any scaffold the model echoes back.
     public func format(text: String, style: TranscriptionStyle) async throws -> String {
+        try await perform(
+            text: text,
+            systemPrompt: PromptComposer.formatPrompt(style: style),
+            temperature: Self.temperature(for: style)
+        )
+    }
+
+    /// Reformat + translate in one request: applies `style` and additionally
+    /// requires the result to be entirely in `targetLanguageCode`.
+    public func format(
+        text: String,
+        style: TranscriptionStyle,
+        sourceLanguageCode: String?,
+        targetLanguageCode: String?
+    ) async throws -> String {
+        let options = PromptComposer.Options(
+            languageCode: sourceLanguageCode,
+            targetLanguageCode: targetLanguageCode
+        )
+        return try await perform(
+            text: text,
+            systemPrompt: PromptComposer.formatPrompt(style: style, options: options),
+            temperature: Self.temperature(for: style)
+        )
+    }
+
+    /// Translate-only call (used when the NONE style is combined with
+    /// translation). Keeps the source text unchanged in wording beyond the
+    /// translation itself.
+    public func translate(
+        text: String,
+        sourceLanguageCode: String?,
+        targetLanguageCode: String?
+    ) async throws -> String {
+        let options = PromptComposer.Options(languageCode: sourceLanguageCode)
+        return try await perform(
+            text: text,
+            systemPrompt: PromptComposer.translatePrompt(
+                sourceLanguageCode: sourceLanguageCode,
+                targetLanguageCode: targetLanguageCode,
+                options: options
+            ),
+            temperature: 0.2
+        )
+    }
+
+    private func perform(
+        text: String,
+        systemPrompt: String,
+        temperature: Double
+    ) async throws -> String {
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -31,10 +82,10 @@ public struct OpenRouterFormattingClient: Sendable {
         let body: [String: Any] = [
             "model": Self.model,
             "messages": [
-                ["role": "system", "content": PromptComposer.formatPrompt(style: style)],
+                ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": DictationInputBoundary.wrap(text)],
             ],
-            "temperature": Self.temperature(for: style),
+            "temperature": temperature,
             "session_id": DeviceSessionID.value,
         ]
         do {

@@ -9,13 +9,13 @@ struct openWhisperApp: App {
     @State private var transcription: TranscriptionService
     @State private var recorder: AudioRecorder
     @State private var toast = ToastCenter()
-    @State private var corrections = CorrectionsStore()
+    @State private var corrections = CorrectionsStore.shared
     @State private var settingsRouter = SettingsRouter()
     @State private var formatting = TextFormattingService()
     private let container: ModelContainer
 
     init() {
-        let settings = SettingsStore()
+        let settings = SettingsStore.shared
         _settings = State(initialValue: settings)
         _modelDownload = State(initialValue: .shared)
         _transcription = State(initialValue: TranscriptionService(settings: settings, modelDownload: .shared))

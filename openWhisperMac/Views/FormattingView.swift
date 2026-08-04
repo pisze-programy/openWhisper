@@ -37,6 +37,12 @@ struct FormattingView: View {
                         tint: .secondary,
                         text: "Switch styles from anywhere: hold right ⌥ and tap right ⇧."
                     )
+
+                    ShortcutHintRow(
+                        icon: "wand.and.stars",
+                        tint: .secondary,
+                        text: "Reformat selected text from anywhere: hold left ⌘ and press left ⌥. Set From/To translation in the Translate tab."
+                    )
                 }
             }
             .padding(.top, 8)
@@ -46,7 +52,7 @@ struct FormattingView: View {
     }
 }
 
-private struct ShortcutHintRow: View {
+struct ShortcutHintRow: View {
     let icon: String
     let tint: Color
     let text: String
