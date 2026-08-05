@@ -26,6 +26,20 @@ struct MenuBarView: View {
             }
 
             Button {
+                windowState.selectedSection = .dictation
+                showMainWindow()
+            } label: {
+                Label("Dictation", systemImage: "waveform.badge.mic")
+            }
+
+            Button {
+                windowState.selectedSection = .translate
+                showMainWindow()
+            } label: {
+                Label("Translate", systemImage: "translate")
+            }
+
+            Button {
                 windowState.selectedSection = .settings
                 showMainWindow()
             } label: {

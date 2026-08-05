@@ -9,6 +9,12 @@ struct FormattingView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                if !TextFormattingService.hasApiKey {
+                    ApiKeyRequiredBanner()
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+
                 SettingsSection("Formatting") {
                     VStack(spacing: 8) {
                         ForEach(TranscriptionStyle.allCases) { style in
@@ -18,17 +24,10 @@ struct FormattingView: View {
                             ) {
                                 settings.formattingStyle = style
                             }
+                            .disabled(style != .none && !TextFormattingService.hasApiKey)
                         }
                     }
                     .padding(.vertical, 8)
-
-                    if settings.formattingStyle != .none && !TextFormattingService.hasApiKey {
-                        ShortcutHintRow(
-                            icon: "exclamationmark.triangle.fill",
-                            tint: .orange,
-                            text: "This style uses the OpenRouter API. Add your key in Dictation → OpenRouter API, or pick None for a fast, local transcript."
-                        )
-                    }
 
                     Divider()
 
@@ -41,7 +40,7 @@ struct FormattingView: View {
                     ShortcutHintRow(
                         icon: "wand.and.stars",
                         tint: .secondary,
-                        text: "Reformat selected text from anywhere: hold left ⌘ and press left ⌥. Set From/To translation in the Translate tab."
+                        text: "Reformat copied text from anywhere: copy the text, then press FN + right ⌥. Set From/To translation in the Translate tab."
                     )
                 }
             }

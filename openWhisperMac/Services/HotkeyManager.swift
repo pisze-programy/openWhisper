@@ -4,8 +4,8 @@ import Foundation
 /// Global hotkey handling via `NSEvent` monitors. Hold right ⌘+⌥ to start
 /// recording, release to stop; ESC cancels (optionally requiring a second press).
 /// Hold right ⌥ and tap right ⇧ to cycle the formatting style.
-/// Left side: hold left ⌘+⌥ to translate + reformat the selected text; hold left
-/// ⌘ and tap left ⇧ to swap the translation FROM/TO pair.
+/// Press FN + right ⌥ to translate + reformat the copied text — fires on the
+/// press (either key order), not on release.
 @MainActor
 final class HotkeyManager {
     static let shared = HotkeyManager()
@@ -19,12 +19,9 @@ final class HotkeyManager {
     /// Fired when the style-switch chord is released after at least one cycle —
     /// the caller should persist the selection here (no autosave while cycling).
     var onStyleCycleEnd: (() -> Void)?
-    /// Fired once per left ⌘+⌥ press: translate + reformat the selected text.
+    /// Fired once per FN + right ⌥ press: translate + reformat the copied text.
     var onTranslateReformat: (() -> Void)?
-    /// Fired when left ⇧ is tapped while left ⌘ is held: swap the FROM/TO pair.
-    var onSwapTranslateDirection: (() -> Void)?
 
-    // Right-side (recording + style cycling) state.
     private var rightCmdDown = false
     private var rightOptDown = false
     private var rightShiftDown = false
@@ -32,12 +29,8 @@ final class HotkeyManager {
     private var lastEscapePress: Date?
     /// True when a style cycle happened during the current right-⌥ hold.
     private var styleSessionDidCycle = false
-
-    // Left-side (translate + reformat) state.
-    private var leftCmdDown = false
-    private var leftOptDown = false
-    private var leftShiftDown = false
-    private var leftReformatTriggered = false
+    /// True once FN + right ⌥ has fired for the current right-⌥ hold.
+    private var translateTriggered = false
 
     private init() {}
 
@@ -61,7 +54,6 @@ final class HotkeyManager {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
         var didCycleStyle = false
-        var didSwapTranslate = false
         switch event.keyCode {
         case 54: // right command
             rightCmdDown = flags.contains(.command)
@@ -71,6 +63,7 @@ final class HotkeyManager {
             if rightOptDown && !wasDown {
                 // Option freshly pressed: begin a new style-cycling session.
                 styleSessionDidCycle = false
+                translateTriggered = false
             } else if !rightOptDown && wasDown && styleSessionDidCycle {
                 // Option released after cycling: persist the selection once.
                 styleSessionDidCycle = false
@@ -81,20 +74,6 @@ final class HotkeyManager {
             rightShiftDown = flags.contains(.shift)
             // Rising edge only: hold right ⌥, tap right ⇧ to cycle one style.
             didCycleStyle = rightShiftDown && !wasDown
-        case 55: // left command
-            leftCmdDown = flags.contains(.command)
-        case 58: // left option
-            let wasDown = leftOptDown
-            leftOptDown = flags.contains(.option)
-            if leftOptDown && !wasDown {
-                // Option freshly pressed: a fresh ⌘+⌥ chord may trigger again.
-                leftReformatTriggered = false
-            }
-        case 56: // left shift
-            let wasDown = leftShiftDown
-            leftShiftDown = flags.contains(.shift)
-            // Rising edge only: hold left ⌘, tap left ⇧ to swap the pair.
-            didSwapTranslate = leftShiftDown && !wasDown
         default:
             break
         }
@@ -102,6 +81,16 @@ final class HotkeyManager {
         if didCycleStyle && rightOptDown && !rightCmdDown && !isRecordingActive {
             styleSessionDidCycle = true
             onCycleStyle?()
+        }
+
+        // FN + right ⌥ → translate + reformat. Fires once per right-⌥ hold, on
+        // the press (either key order), regardless of release. Right ⌘ is not
+        // involved, so the STT chord (right ⌘+⌥) never intercepts it.
+        if rightOptDown && !rightCmdDown && flags.contains(.function) && !isRecordingActive {
+            if !translateTriggered {
+                translateTriggered = true
+                onTranslateReformat?()
+            }
         }
 
         if rightCmdDown && rightOptDown {
@@ -121,19 +110,6 @@ final class HotkeyManager {
                 onStyleCycleEnd?()
             }
             onRecordStop?()
-        }
-
-        if didSwapTranslate && leftCmdDown && !leftOptDown && !isRecordingActive {
-            onSwapTranslateDirection?()
-        }
-
-        if leftCmdDown && leftOptDown && !leftShiftDown && !isRecordingActive {
-            if !leftReformatTriggered {
-                leftReformatTriggered = true
-                onTranslateReformat?()
-            }
-        } else if !leftCmdDown || !leftOptDown {
-            leftReformatTriggered = false
         }
     }
 
@@ -158,9 +134,6 @@ final class HotkeyManager {
         rightOptDown = false
         rightShiftDown = false
         styleSessionDidCycle = false
-        leftCmdDown = false
-        leftOptDown = false
-        leftShiftDown = false
-        leftReformatTriggered = false
+        translateTriggered = false
     }
 }

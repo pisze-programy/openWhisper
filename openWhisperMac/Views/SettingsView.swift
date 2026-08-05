@@ -11,6 +11,15 @@ struct SettingsView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                SettingsSection("API Key") {
+                    ApiKeyRow(keyName: AppGroup.cloudApiKeyKey, placeholder: "sk-or-...")
+                    ShortcutHintRow(
+                        icon: "key.fill",
+                        tint: .secondary,
+                        text: "Used by AI formatting and translations. Stored only on this device."
+                    )
+                }
+
                 SettingsSection("Audio") {
                     ToggleRow(
                         "Whisper Mode (auto gain)",

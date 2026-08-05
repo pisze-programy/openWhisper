@@ -3,11 +3,12 @@ import Foundation
 import OpenWhisperShared
 import os
 
-/// Processes existing text (selection or whole focused field) with the same
+/// Processes the text the user copied to the clipboard with the same
 /// post-processing pipeline dictation uses: local cleanup + optional AI
-/// formatting and/or translation, then replaces the text in place or copies it
-/// to the clipboard when the source is not an editable input (e.g. a selection
-/// in a web page). Driven by the left-side hotkeys.
+/// formatting and/or translation. The result is pasted into the focused
+/// editable field (replacing a selection, or inserting at the caret) or left on
+/// the clipboard when there is no editable field. Driven by the left-side
+/// hotkeys.
 @MainActor
 final class ReformatOrchestrator {
     private(set) var isRunning = false
@@ -58,12 +59,7 @@ final class ReformatOrchestrator {
         guard !isRunning else { return }
         guard insertion.isAccessibilityGranted else {
             insertion.requestAccessibilityPermission()
-            StatusOverlayPanel.shared.showMessage(
-                title: "Allow Accessibility",
-                detail: "OpenWhisper needs Accessibility to read and replace your text.",
-                icon: .warning,
-                tint: .orange
-            )
+            StatusOverlayPanel.shared.showMessage(title: "Allow Accessibility", icon: .warning, tint: .orange)
             return
         }
 
@@ -71,17 +67,19 @@ final class ReformatOrchestrator {
         let needsAPI = translateActive || settings.formattingStyle != .none
         if needsAPI, !TextFormattingService.hasApiKey {
             StatusOverlayPanel.shared.showMessage(
-                title: "OpenRouter key missing",
-                detail: "Add your API key in Dictation → OpenRouter API to format or translate.",
-                icon: .warning,
-                tint: .orange
+                title: "Go to Settings",
+                detail: "Add your OpenRouter API key to translate.",
+                icon: .error,
+                tint: .red
             )
             return
         }
 
         targetApp = NSWorkspace.shared.frontmostApplication
-        guard let selection = insertion.captureActiveSelection() else {
-            StatusOverlayPanel.shared.showMessage(title: "No text selected")
+        let source = NSPasteboard.general.string(forType: .string)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !source.isEmpty else {
+            StatusOverlayPanel.shared.showMessage(title: "No text on clipboard")
             return
         }
 
@@ -93,15 +91,14 @@ final class ReformatOrchestrator {
 
         activeTask = Task { [weak self] in
             guard let self else { return }
-            let text = selection.text
             do {
-                let processed = try await self.process(text: text, translateActive: translateActive)
+                let processed = try await self.process(text: source, translateActive: translateActive)
                 let trimmed = processed.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else {
                     self.showFailure("The result was empty.")
                     return
                 }
-                self.deliver(trimmed, selection: selection)
+                self.deliver(trimmed)
             } catch {
                 self.showFailure(error.localizedDescription)
             }
@@ -172,11 +169,15 @@ final class ReformatOrchestrator {
 
     // MARK: - Delivery
 
-    private func deliver(_ text: String, selection: TextInsertionService.CapturedSelection) {
+    private func deliver(_ text: String) {
         RecentsStore.shared.set(text)
         sounds.play(.transcriptionSuccess)
 
-        if selection.editable {
+        // Always paste when there is an editable field under focus (a selection
+        // gets replaced, otherwise the text is inserted at the caret). When the
+        // frontmost app has no editable field (e.g. a web page), leave the
+        // result on the clipboard.
+        if insertion.canPasteToActiveField() {
             // Put the window the user started from back on top before pasting so
             // the result lands where the hotkey was pressed, not where the focus
             // wandered while the request was in flight.
@@ -187,22 +188,12 @@ final class ReformatOrchestrator {
             )
             Task { [weak self] in
                 guard let self else { return }
-                let verified = await self.insertion.replaceFocusedText(
+                await self.insertion.insertText(
                     text,
-                    selection: selection,
                     outputFormat: outputFormat,
                     preserveClipboard: self.settings.preserveClipboard
                 )
-                if verified {
-                    StatusOverlayPanel.shared.showMessage(title: "Pasted", icon: .check, tint: .green)
-                } else {
-                    StatusOverlayPanel.shared.showMessage(
-                        title: "Copied to clipboard",
-                        detail: "Paste could not be verified — the result is on your clipboard.",
-                        icon: .warning,
-                        tint: .orange
-                    )
-                }
+                StatusOverlayPanel.shared.showMessage(title: "Copied", icon: .check, tint: .green)
                 self.isRunning = false
             }
             return
@@ -215,12 +206,7 @@ final class ReformatOrchestrator {
 
     private func showFailure(_ detail: String) {
         logger.error("Reformat failed: \(detail, privacy: .public)")
-        StatusOverlayPanel.shared.showMessage(
-            title: "Could not process text",
-            detail: detail,
-            icon: .warning,
-            tint: .orange
-        )
+        StatusOverlayPanel.shared.showMessage(title: "Failed", icon: .warning, tint: .orange)
         isRunning = false
     }
 }

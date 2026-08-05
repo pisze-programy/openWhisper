@@ -1,9 +1,9 @@
 import SwiftUI
 import OpenWhisperShared
 
-/// Dedicated Translate tab: FROM/TO language pickers for the left-⌘+⌥ hotkey and
-/// the shortcut reference. Kept separate from Settings because it is a core,
-/// frequently-used feature.
+/// Dedicated Translate tab: FROM/TO language pickers for the FN+right-⌥ hotkey
+/// and the shortcut reference. Kept separate from Settings because it is a
+/// core, frequently-used feature.
 struct TranslateView: View {
     @Environment(SettingsStore.self) private var settings
 
@@ -15,6 +15,13 @@ struct TranslateView: View {
 
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                if !TextFormattingService.hasApiKey {
+                    ApiKeyRequiredBanner()
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+
+                let keyAvailable = TextFormattingService.hasApiKey
                 SettingsSection("Translate") {
                     LanguagePickerRow(
                         title: "From",
@@ -27,6 +34,7 @@ struct TranslateView: View {
                         ),
                         includeAuto: true
                     )
+                    .disabled(!keyAvailable)
 
                     Divider()
 
@@ -41,26 +49,15 @@ struct TranslateView: View {
                         ),
                         includeOff: true
                     )
+                    .disabled(!keyAvailable)
 
                     Divider()
 
                     ShortcutHintRow(
                         icon: "keyboard",
                         tint: .secondary,
-                        text: "Translate + format selected text: hold left ⌘ and press left ⌥."
+                        text: "Copy the text, then press FN + right ⌥ to translate + format it (paste replaces the selection)."
                     )
-                    ShortcutHintRow(
-                        icon: "arrow.triangle.2.circlepath",
-                        tint: .secondary,
-                        text: "Swap From/To: hold left ⌘ and tap left ⇧."
-                    )
-                    if settings.isTranslationActive {
-                        ShortcutHintRow(
-                            icon: "info.circle",
-                            tint: .blue,
-                            text: "Translation sends the selected text to OpenRouter. The NONE style translates without formatting."
-                        )
-                    }
                 }
             }
             .padding(.top, 8)

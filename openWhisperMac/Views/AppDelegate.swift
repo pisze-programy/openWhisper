@@ -90,15 +90,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         HotkeyManager.shared.requireSecondEscapeToCancel = settings.requireSecondEscapeToCancel
-        HotkeyManager.shared.onRecordStart = {
-            reformat.cancel()
-            orchestrator.startRecording()
-        }
+        HotkeyManager.shared.onRecordStart = { orchestrator.startRecording() }
         HotkeyManager.shared.onRecordStop = { orchestrator.stopAndTranscribe() }
         HotkeyManager.shared.onCancel = { orchestrator.cancel() }
         HotkeyManager.shared.onCycleStyle = {
-            // Preview only — the final style is persisted on key release.
-            settings.cycleFormattingStyle(preview: true)
+            // Without an API key the only usable style is NONE — keep the style
+            // hotkey locked there instead of cycling into AI styles that would
+            // fail. The orchestrators guard their own state.
+            if TextFormattingService.hasApiKey {
+                settings.cycleFormattingStyle(preview: true)
+            } else {
+                settings.formattingStyle = .none
+            }
             StatusOverlayPanel.shared.showStyleSwitch(style: settings.formattingStyle) {
                 FeedbackSoundService.shared.play(.styleChanged)
             }
@@ -107,20 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.persistFormattingStyle()
             StatusOverlayPanel.shared.confirmStyleSelection()
         }
-        HotkeyManager.shared.onTranslateReformat = {
-            // Never run reformat while a recording is in flight.
-            guard orchestrator.phase == .idle else { return }
-            reformat.run()
-        }
-        HotkeyManager.shared.onSwapTranslateDirection = {
-            guard orchestrator.phase == .idle else { return }
-            settings.swapTranslateDirection()
-            let fromName = settings.translateSourceCode.flatMap { Language.language(for: $0)?.name } ?? "Auto"
-            let toName = settings.translateTargetCode.flatMap { Language.language(for: $0)?.name } ?? "Off"
-            StatusOverlayPanel.shared.showTranslateSwap(from: fromName, to: toName) {
-                FeedbackSoundService.shared.play(.styleChanged)
-            }
-        }
+        HotkeyManager.shared.onTranslateReformat = { reformat.run() }
         HotkeyManager.shared.start()
 
         if !settings.onboardingCompleted {

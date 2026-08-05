@@ -32,10 +32,6 @@ struct DictationView: View {
                         isOn: $settings.preserveClipboard
                     )
                 }
-
-                SettingsSection("OpenRouter API") {
-                    ApiKeyRow(keyName: AppGroup.cloudApiKeyKey, placeholder: "sk-or-...")
-                }
             }
             .padding(.top, 8)
         }
