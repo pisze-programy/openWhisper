@@ -179,6 +179,7 @@ scripts/make-dmg.sh    one-command Release build → DMG
 ## Roadmap
 
 - **macOS 1.0** — core STT, overlay, history, settings, DMG
+- **macOS 1.1–1.3** — AI formatting styles, translation target cycle (right ⌘+⇧), Translate tab, shared selector overlay, UX polish
 - **Keyboard extension** (maybe) — dictate-anywhere on iPhone
 - **App Store** — macOS (and iOS), free on-device core
 
