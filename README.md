@@ -20,7 +20,7 @@
 |---|---|
 | **Dictate (STT)** | hold **right ⌘+⌥**, speak, release |
 | **Cycle format style** | hold **right ⌥**, tap **right ⇧** |
-| **Translate copied text** | copy text → **FN + right ⌥** |
+| **Cycle translation target** | hold **right ⌘**, tap **right ⇧** |
 
 ---
 
@@ -49,7 +49,7 @@
   <table width="100%">
     <tr>
       <td align="center">
-        <strong>Translation</strong> — copy text → FN + right ⌥ → pasted over the selection.<br>
+        <strong>Translation</strong> — hold right ⌘, tap right ⇧ → overlay cycles the target (None/English/…) → green check. Dictation is translated into the selected target.<br>
         <em>Demo video coming soon.</em>
       </td>
     </tr>
@@ -95,7 +95,7 @@ Menu bar — status · Dictation · Translate · Settings · style picker · cop
     <tr>
       <td colspan="2" align="center">
         <img src="docs/assets/macos/translate.jpeg" width="100%" alt="Translate">
-        <br><em>Translate — From/To languages, FN + right ⌥ shortcut.</em>
+        <br><em>Translate — target languages + right ⌘+⇧ cycle shortcut.</em>
       </td>
     </tr>
   </table>
@@ -115,7 +115,7 @@ iOS demos coming soon.
 - **Glass overlay** — app icon, live waveform, phase status
 - **Auto-paste** — into frontmost app (Accessibility); auto-copy too
 - **AI formatting** — Formal · Casual · Minimal · Brief (OpenRouter, optional)
-- **Translate + format** — copied text → FN + right ⌥ → pasted (From/To languages)
+- **Translation** — dictation translated into the target chosen with right ⌘+⇧
 - **Audio ducking** — auto volume down during recording
 - **Timeline history** — grouped by day, tap to copy
 - **Launch at login**

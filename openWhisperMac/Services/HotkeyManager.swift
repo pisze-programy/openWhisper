@@ -3,9 +3,8 @@ import Foundation
 
 /// Global hotkey handling via `NSEvent` monitors. Hold right ⌘+⌥ to start
 /// recording, release to stop; ESC cancels (optionally requiring a second press).
-/// Hold right ⌥ and tap right ⇧ to cycle the formatting style.
-/// Press FN + right ⌥ to translate + reformat the copied text — fires on the
-/// press (either key order), not on release.
+/// Hold right ⌥ and tap right ⇧ to cycle the formatting style; hold right ⌘ and
+/// tap right ⇧ to cycle the translation target.
 @MainActor
 final class HotkeyManager {
     static let shared = HotkeyManager()
@@ -19,8 +18,11 @@ final class HotkeyManager {
     /// Fired when the style-switch chord is released after at least one cycle —
     /// the caller should persist the selection here (no autosave while cycling).
     var onStyleCycleEnd: (() -> Void)?
-    /// Fired once per FN + right ⌥ press: translate + reformat the copied text.
-    var onTranslateReformat: (() -> Void)?
+    /// Fired when the translation-switch chord is released after at least one
+    /// cycle — the caller should persist the selection here.
+    var onTranslationCycleEnd: (() -> Void)?
+    /// Fired when the translation target should advance one step (right ⌘ + ⇧).
+    var onCycleTranslation: (() -> Void)?
 
     private var rightCmdDown = false
     private var rightOptDown = false
@@ -29,8 +31,8 @@ final class HotkeyManager {
     private var lastEscapePress: Date?
     /// True when a style cycle happened during the current right-⌥ hold.
     private var styleSessionDidCycle = false
-    /// True once FN + right ⌥ has fired for the current right-⌥ hold.
-    private var translateTriggered = false
+    /// True when a translation cycle happened during the current right-⌘ hold.
+    private var translationSessionDidCycle = false
 
     private init() {}
 
@@ -54,16 +56,27 @@ final class HotkeyManager {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
         var didCycleStyle = false
+        var didCycleTranslation = false
         switch event.keyCode {
         case 54: // right command
+            let wasDown = rightCmdDown
             rightCmdDown = flags.contains(.command)
+            if rightCmdDown && !wasDown {
+                // Command freshly pressed: begin a new translation-cycling session.
+                translationSessionDidCycle = false
+            } else if !rightCmdDown && wasDown && translationSessionDidCycle {
+                // Command released after cycling: persist the selection once.
+                translationSessionDidCycle = false
+                onTranslationCycleEnd?()
+            }
+        case 55: // left command (tracked only so the chords are unambiguous)
+            break
         case 61: // right option
             let wasDown = rightOptDown
             rightOptDown = flags.contains(.option)
             if rightOptDown && !wasDown {
                 // Option freshly pressed: begin a new style-cycling session.
                 styleSessionDidCycle = false
-                translateTriggered = false
             } else if !rightOptDown && wasDown && styleSessionDidCycle {
                 // Option released after cycling: persist the selection once.
                 styleSessionDidCycle = false
@@ -72,8 +85,10 @@ final class HotkeyManager {
         case 60: // right shift
             let wasDown = rightShiftDown
             rightShiftDown = flags.contains(.shift)
-            // Rising edge only: hold right ⌥, tap right ⇧ to cycle one style.
+            // Rising edge only: right ⇧ taps cycle style (hold ⌥) or the
+            // translation target (hold ⌘). The guards below pick which one.
             didCycleStyle = rightShiftDown && !wasDown
+            didCycleTranslation = rightShiftDown && !wasDown
         default:
             break
         }
@@ -83,14 +98,9 @@ final class HotkeyManager {
             onCycleStyle?()
         }
 
-        // FN + right ⌥ → translate + reformat. Fires once per right-⌥ hold, on
-        // the press (either key order), regardless of release. Right ⌘ is not
-        // involved, so the STT chord (right ⌘+⌥) never intercepts it.
-        if rightOptDown && !rightCmdDown && flags.contains(.function) && !isRecordingActive {
-            if !translateTriggered {
-                translateTriggered = true
-                onTranslateReformat?()
-            }
+        if didCycleTranslation && rightCmdDown && !rightOptDown && !isRecordingActive {
+            translationSessionDidCycle = true
+            onCycleTranslation?()
         }
 
         if rightCmdDown && rightOptDown {
@@ -108,6 +118,11 @@ final class HotkeyManager {
             if styleSessionDidCycle {
                 styleSessionDidCycle = false
                 onStyleCycleEnd?()
+            }
+            // Same for a translation cycle held on the right ⌘ while recording.
+            if translationSessionDidCycle {
+                translationSessionDidCycle = false
+                onTranslationCycleEnd?()
             }
             onRecordStop?()
         }
@@ -134,6 +149,6 @@ final class HotkeyManager {
         rightOptDown = false
         rightShiftDown = false
         styleSessionDidCycle = false
-        translateTriggered = false
+        translationSessionDidCycle = false
     }
 }

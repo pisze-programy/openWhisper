@@ -28,7 +28,7 @@ struct MacRootView: View {
             case .history: return "Past transcriptions"
             case .formatting: return "AI style and rewrite"
             case .dictation: return "Model, recording, API"
-            case .translate: return "From/To languages, shortcuts"
+            case .translate: return "Target languages, shortcuts"
             case .settings: return "Audio, history, permissions"
             }
         }

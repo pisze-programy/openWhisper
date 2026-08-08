@@ -132,14 +132,6 @@ final class TextInsertionService {
 
     // MARK: - AX
 
-    /// Whether the frontmost app currently has an editable text field in focus
-    /// that a synthetic paste can land in. Used by the translate hotkey: the
-    /// source text always comes from the clipboard, so we only need to know if
-    /// there is a field to paste the result into.
-    func canPasteToActiveField() -> Bool {
-        focusedTextCandidate()?.editable == true
-    }
-
     private func systemFocusedElement() -> AXUIElement? {
         let systemWide = AXUIElementCreateSystemWide()
         var focused: AnyObject?

@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var current: AppDelegate?
 
     private(set) var orchestrator: DictationOrchestrator?
-    private(set) var reformat: ReformatOrchestrator?
     var appOpenWindow: OpenWindowAction?
     var sharedContainer: ModelContainer?
 
@@ -51,16 +50,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             modelContext: container.mainContext
         )
         self.orchestrator = orchestrator
-
-        let reformat = ReformatOrchestrator(
-            settings: settings,
-            pipeline: pipeline,
-            insertion: TextInsertionService.shared,
-            clipboard: MacClipboardService.shared,
-            corrections: corrections,
-            sounds: FeedbackSoundService.shared
-        )
-        self.reformat = reformat
 
         // Seed "Copy Last Translation" from persisted history so the menu bar
         // action works right after launch, before any new dictation this session.
@@ -108,9 +97,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         HotkeyManager.shared.onStyleCycleEnd = {
             settings.persistFormattingStyle()
-            StatusOverlayPanel.shared.confirmStyleSelection()
+            StatusOverlayPanel.shared.confirmSelectorSelection()
         }
-        HotkeyManager.shared.onTranslateReformat = { reformat.run() }
+        HotkeyManager.shared.onCycleTranslation = {
+            // Without an API key no target can be applied — keep the translation
+            // hotkey locked on NONE instead of cycling into languages that would
+            // fail. The orchestrator guards its own state.
+            if TextFormattingService.hasApiKey {
+                settings.cycleTranslationTarget(preview: true)
+            } else {
+                settings.translationTargetCode = nil
+            }
+            StatusOverlayPanel.shared.showTranslationSwitch(target: settings.translationTargetCode) {
+                FeedbackSoundService.shared.play(.styleChanged)
+            }
+        }
+        HotkeyManager.shared.onTranslationCycleEnd = {
+            settings.persistTranslationTarget()
+            StatusOverlayPanel.shared.confirmSelectorSelection()
+        }
         HotkeyManager.shared.start()
 
         if !settings.onboardingCompleted {
@@ -134,7 +139,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         sleepObserver?.stop()
         orchestrator?.cancel()
-        reformat?.cancel()
         AudioDuckingService.shared.restore()
     }
 }

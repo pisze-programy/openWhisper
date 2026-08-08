@@ -38,9 +38,9 @@ struct FormattingView: View {
                     )
 
                     ShortcutHintRow(
-                        icon: "wand.and.stars",
+                        icon: "translate",
                         tint: .secondary,
-                        text: "Reformat copied text from anywhere: copy the text, then press FN + right ⌥. Set From/To translation in the Translate tab."
+                        text: "Translation target (None/Polish/English…) is set in the Translate tab and switched with hold right ⌘ and tap right ⇧."
                     )
                 }
             }

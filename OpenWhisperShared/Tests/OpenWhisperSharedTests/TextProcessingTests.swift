@@ -140,29 +140,53 @@ final class TextProcessingTests: XCTestCase {
     }
 
     @MainActor
-    func testTranslateDirectionSwap() {
+    func testTranslationCycleWrapsThroughNoneAndTargets() {
         let settings = SettingsStore()
-        settings.translateSourceCode = "pl"
-        settings.translateTargetCode = "en"
-        XCTAssertTrue(settings.isTranslationActive)
+        settings.translationTargets = ["pl", "en"]
+        settings.translationTargetCode = nil
 
-        settings.swapTranslateDirection()
-        XCTAssertEqual(settings.translateSourceCode, "en")
-        XCTAssertEqual(settings.translateTargetCode, "pl")
+        settings.cycleTranslationTarget()
+        XCTAssertEqual(settings.translationTargetCode, "pl")
+
+        settings.cycleTranslationTarget()
+        XCTAssertEqual(settings.translationTargetCode, "en")
+
+        settings.cycleTranslationTarget()
+        XCTAssertNil(settings.translationTargetCode) // wraps back to NONE
     }
 
     @MainActor
-    func testTranslateInactiveWhenLanguagesMatchOrUnset() {
+    func testTranslationCycleKeepsNoneWhenAllLanguagesRemoved() {
         let settings = SettingsStore()
-        settings.translateSourceCode = "pl"
-        settings.translateTargetCode = "pl"
-        XCTAssertFalse(settings.isTranslationActive)
+        settings.translationTargets = []
+        settings.translationTargetCode = nil
 
-        settings.translateTargetCode = nil
-        XCTAssertFalse(settings.isTranslationActive)
+        settings.cycleTranslationTarget()
+        XCTAssertNil(settings.translationTargetCode)
+    }
 
-        settings.swapTranslateDirection()
-        XCTAssertEqual(settings.translateSourceCode, "pl")
-        XCTAssertNil(settings.translateTargetCode)
+    @MainActor
+    func testRemovingSelectedTargetResetsToNone() {
+        let settings = SettingsStore()
+        settings.translationTargets = ["pl", "en"]
+        settings.translationTargetCode = "pl"
+
+        settings.translationTargets.removeAll { $0 == "pl" }
+        XCTAssertEqual(settings.translationTargets, ["en"])
+        XCTAssertNil(settings.translationTargetCode)
+    }
+
+    @MainActor
+    func testTranslationCyclePreviewDoesNotPersist() {
+        let settings = SettingsStore()
+        settings.translationTargets = ["pl", "en"]
+        settings.translationTargetCode = nil
+
+        settings.cycleTranslationTarget(preview: true)
+        XCTAssertEqual(settings.translationTargetCode, "pl")
+        XCTAssertNil(UserDefaults.standard.string(forKey: "settings.translationTargetCode"))
+
+        settings.persistTranslationTarget()
+        XCTAssertEqual(UserDefaults.standard.string(forKey: "settings.translationTargetCode"), "pl")
     }
 }

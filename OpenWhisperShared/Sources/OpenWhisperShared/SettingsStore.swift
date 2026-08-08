@@ -143,33 +143,54 @@ public final class SettingsStore {
         UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
     }
 
-    /// Source language for the translate hotkey (left ⌘+⌥). nil = auto-detect.
-    public var translateSourceCode: String? {
+    /// Target language dictation output is translated into. `nil` = None — the
+    /// text stays in the Speech-to-Text language. Chosen at recording time with
+    /// the right ⌘+⇧ hotkey; persisted here so the picker remembers the selection.
+    public var translationTargetCode: String? {
         didSet {
-            UserDefaults.standard.set(translateSourceCode, forKey: "settings.translateSourceCode")
+            guard !suppressTranslationTargetSave else { return }
+            UserDefaults.standard.set(translationTargetCode, forKey: "settings.translationTargetCode")
         }
     }
 
-    /// Target language for the translate hotkey. nil = translation disabled
-    /// (the hotkey reformats only).
-    public var translateTargetCode: String? {
+    /// Languages available to the translation-target cycle, in cycle order.
+    /// NONE is always part of the cycle and is never stored here — removing all
+    /// languages leaves only NONE, i.e. no translation.
+    public var translationTargets: [String] {
         didSet {
-            UserDefaults.standard.set(translateTargetCode, forKey: "settings.translateTargetCode")
+            UserDefaults.standard.set(translationTargets, forKey: "settings.translationTargets")
+            if let target = translationTargetCode, !translationTargets.contains(target) {
+                translationTargetCode = nil
+            }
         }
     }
 
-    /// Whether the translate hotkey performs an actual translation (both
-    /// languages set and different). When false, the hotkey reformats only.
-    public var isTranslationActive: Bool {
-        guard let source = translateSourceCode, let target = translateTargetCode else { return false }
-        return source != target
+    /// The full set of options the translation hotkey cycles through: NONE first
+    /// (always present), then the enabled target languages.
+    public var translationCycleOptions: [String?] {
+        [nil] + translationTargets
     }
 
-    /// Swaps the FROM/TO translation pair. No-op when either side is unset.
-    public func swapTranslateDirection() {
-        guard let source = translateSourceCode, let target = translateTargetCode else { return }
-        translateSourceCode = target
-        translateTargetCode = source
+    /// Set while cycling translation targets with the hotkey so intermediate
+    /// previews are not persisted; the final selection is saved on key release.
+    private var suppressTranslationTargetSave = false
+
+    /// Advances to the next translation target (wrapping), starting from NONE.
+    /// Used by the macOS right ⌘+⇧ hotkey. Pass `preview: true` while the user is
+    /// still holding the hotkey — nothing is written to UserDefaults until
+    /// `persistTranslationTarget`.
+    public func cycleTranslationTarget(preview: Bool = false) {
+        suppressTranslationTargetSave = preview
+        defer { suppressTranslationTargetSave = false }
+        let options = translationCycleOptions
+        guard let index = options.firstIndex(of: translationTargetCode) else { return }
+        translationTargetCode = options[(index + 1) % options.count]
+    }
+
+    /// Persists the currently selected translation target. Called when the
+    /// translation-switch hotkey is released.
+    public func persistTranslationTarget() {
+        UserDefaults.standard.set(translationTargetCode, forKey: "settings.translationTargetCode")
     }
 
     public var onboardingCompleted: Bool {
@@ -240,7 +261,12 @@ public final class SettingsStore {
         }
         formattingStyle = style
         launchAtLogin = defaults.object(forKey: "settings.launchAtLogin") as? Bool ?? true
-        translateSourceCode = defaults.string(forKey: "settings.translateSourceCode") ?? "pl"
-        translateTargetCode = defaults.string(forKey: "settings.translateTargetCode") ?? "en"
+        translationTargetCode = defaults.string(forKey: "settings.translationTargetCode")
+        translationTargets = defaults.stringArray(forKey: "settings.translationTargets") ?? ["pl", "en"]
+        // A persisted target that is no longer in the cycle list (e.g. from a
+        // previous version) is not reachable via the hotkey — drop it to NONE.
+        if let target = translationTargetCode, !translationTargets.contains(target) {
+            translationTargetCode = nil
+        }
     }
 }

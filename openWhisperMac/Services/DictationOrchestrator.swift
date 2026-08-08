@@ -40,6 +40,9 @@ final class DictationOrchestrator {
     /// this recording is in flight must not affect it — the current transcript
     /// keeps the style it had at the start; the next recording uses the new one.
     private var recordingStyle: TranscriptionStyle?
+    /// Translation target captured when recording started, same snapshot
+    /// principle as `recordingStyle`.
+    private var recordingTranslationTarget: String?
 
     init(
         recorder: MacRecorder,
@@ -73,6 +76,7 @@ final class DictationOrchestrator {
         targetAppProcessID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         StatusOverlayPanel.shared.activeAppIcon = NSWorkspace.shared.frontmostApplication?.icon
         recordingStyle = settings.formattingStyle
+        recordingTranslationTarget = settings.translationTargetCode
 
         activeTask = Task { [weak self] in
             guard let self else { return }
@@ -107,6 +111,7 @@ final class DictationOrchestrator {
         ducking.restore()
         targetAppProcessID = nil
         recordingStyle = nil
+        recordingTranslationTarget = nil
         activeTask?.cancel()
         activeTask = nil
         setPhase(.idle)
@@ -118,7 +123,9 @@ final class DictationOrchestrator {
         let duration = Double(samples.count) / 16_000.0
         let peak = Self.peakLevel(of: samples)
         let style = recordingStyle ?? settings.formattingStyle
+        let translationTarget = recordingTranslationTarget
         recordingStyle = nil
+        recordingTranslationTarget = nil
 
         do {
             try await transcription.waitForModelReady()
@@ -166,22 +173,46 @@ final class DictationOrchestrator {
                 return
             }
 
-            if style != .none {
+            let sourceCode = settings.languageCode
+            // Translating into the STT's own language is a no-op (the model
+            // would just echo the text back) — treat it as NONE to skip the call.
+            let translationActive = translationTarget != nil && translationTarget != sourceCode
+            let useLLM = style != .none || translationActive
+            if useLLM {
                 setPhase(.polishing)
             }
             let context = PostProcessingPipeline.Context(
-                languageCode: settings.languageCode,
+                languageCode: sourceCode,
                 engineId: "fluidaudio",
                 formattingStyle: style,
-                formattingEnabled: style != .none
+                formattingEnabled: useLLM
             )
             let processed = try await pipeline.process(
                 text: text,
                 context: context,
                 corrections: corrections,
-                llmHandler: style != .none
-                    ? { [style, formatting = TextFormattingService()] text in
-                        await formatting.format(text: text, style: style)
+                llmHandler: useLLM
+                    ? { [style, translationTarget, sourceCode, formatting = TextFormattingService()] input in
+                        if let target = translationTarget, target != sourceCode {
+                            if style == .none {
+                                guard let result = await formatting.translateOnly(
+                                    text: input,
+                                    sourceLanguageCode: sourceCode,
+                                    targetLanguageCode: target
+                                ) else { return input }
+                                return result
+                            }
+                            // Single combined request: rewrite in `style` and
+                            // require the entire output in the target language.
+                            guard let result = await formatting.reformatAndTranslate(
+                                text: input,
+                                style: style,
+                                sourceLanguageCode: sourceCode,
+                                targetLanguageCode: target
+                            ) else { return input }
+                            return result
+                        }
+                        return await formatting.format(text: input, style: style)
                     }
                     : nil
             )

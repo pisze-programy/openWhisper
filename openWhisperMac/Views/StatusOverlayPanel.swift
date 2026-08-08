@@ -10,16 +10,16 @@ final class StatusOverlayPanel {
     var getSamples: (@MainActor () -> [Float])?
 
     private static let recordingPanelSize = NSSize(width: 280, height: 52)
-    private static let stylePanelSize = NSSize(width: 380, height: 52)
+    private static let selectorPanelSize = NSSize(width: 380, height: 52)
     private static let messagePanelWidth: CGFloat = 380
 
     private var panel: NSPanel?
     private var hostingView: NSHostingView<StatusOverlayView>?
-    private var styleHostingView: NSHostingView<StyleOverlayView>?
-    private var styleGeneration = 0
-    private var styleTask: Task<Void, Never>?
-    private var currentStyle: TranscriptionStyle = .none
-    private var currentOnConfirm: (() -> Void)?
+    private var selectorHostingView: NSHostingView<SelectorOverlayView>?
+    private var selectorGeneration = 0
+    private var selectorTask: Task<Void, Never>?
+    private var currentSelector: SelectorOverlayContent?
+    private var currentSelectorOnConfirm: (() -> Void)?
     private var messageHostingView: NSHostingView<MessageOverlayView>?
     private var messageGeneration = 0
     private var messageTask: Task<Void, Never>?
@@ -27,11 +27,19 @@ final class StatusOverlayPanel {
 
     private init() {}
 
+    /// Content shown by the shared cycling-selector overlay (style or
+    /// translation target) — the only thing that changes between the two.
+    private struct SelectorOverlayContent {
+        let title: String
+        let subtitle: String
+        let systemImage: String
+    }
+
     func show(phase: DictationOrchestrator.Phase, title: String? = nil) {
         if panel == nil {
             createPanel()
         }
-        cancelStyleOverlay()
+        cancelSelectorOverlay()
         cancelMessage()
         hostingView?.rootView = StatusOverlayView(phase: phase, appIcon: activeAppIcon, titleOverride: title)
         if panel?.isVisible != true {
@@ -57,7 +65,7 @@ final class StatusOverlayPanel {
         if panel == nil {
             createPanel()
         }
-        cancelStyleOverlay()
+        cancelSelectorOverlay()
         hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
         messageHostingView?.rootView = MessageOverlayView(title: title, detail: detail, icon: icon, tint: tint)
         messageHostingView?.isHidden = false
@@ -76,69 +84,119 @@ final class StatusOverlayPanel {
         }
     }
 
-    /// Shows the style-switch overlay for a chosen style. After a short delay the
-    /// style icon morphs into a green checkmark and `onConfirm` fires (the sound);
-    /// then the overlay auto-hides. Rapid re-cycling replaces the overlay, which
-    /// cancels the pending hide of the previous style.
+    // MARK: - Selector overlay (shared by style & translation cycles)
+
+    /// Shows the style-switch overlay for a chosen style.
     func showStyleSwitch(style: TranscriptionStyle, onConfirm: (() -> Void)? = nil) {
-        styleGeneration += 1
-        let generation = styleGeneration
-        currentStyle = style
-        currentOnConfirm = onConfirm
-        styleTask?.cancel()
+        showSelector(
+            title: style.title,
+            subtitle: style.whenToUse,
+            systemImage: style.systemImage,
+            onConfirm: onConfirm
+        )
+    }
+
+    /// Shows the translation-switch overlay for the current target (`nil` =
+    /// None). Same component as the style switch — only the content changes.
+    func showTranslationSwitch(target: String?, onConfirm: (() -> Void)? = nil) {
+        let language = Language.language(for: target)
+        showSelector(
+            title: language?.name ?? "None",
+            subtitle: language == nil ? "No translation — STT language output" : "Target language",
+            systemImage: "globe",
+            onConfirm: onConfirm
+        )
+    }
+
+    /// Displays the cycling-selector overlay. After a short delay the icon
+    /// morphs into a green checkmark and `onConfirm` fires (the sound); then the
+    /// overlay auto-hides. Rapid re-cycling replaces the overlay, which cancels
+    /// the pending hide of the previous selection.
+    private func showSelector(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        onConfirm: (() -> Void)?
+    ) {
+        selectorGeneration += 1
+        let generation = selectorGeneration
+        currentSelector = SelectorOverlayContent(title: title, subtitle: subtitle, systemImage: systemImage)
+        currentSelectorOnConfirm = onConfirm
+        selectorTask?.cancel()
         if panel == nil {
             createPanel()
         }
         cancelMessage()
         hostingView?.rootView = StatusOverlayView(phase: .idle, appIcon: nil)
-        styleHostingView?.rootView = StyleOverlayView(style: style, confirmed: false)
-        styleHostingView?.isHidden = false
+        selectorHostingView?.rootView = SelectorOverlayView(
+            title: title,
+            subtitle: subtitle,
+            systemImage: systemImage,
+            confirmed: false
+        )
+        selectorHostingView?.isHidden = false
         if panel?.isVisible != true {
-            animateShow(size: Self.stylePanelSize)
+            animateShow(size: Self.selectorPanelSize)
         } else {
-            positionAndShow(size: Self.stylePanelSize)
+            positionAndShow(size: Self.selectorPanelSize)
             panel?.alphaValue = 1
         }
-        scheduleStyleConfirmation(after: 900, generation: generation)
+        scheduleSelectorConfirmation(after: 900, generation: generation)
     }
 
-    /// Called when the style-switch hotkey is released after cycling: skip
-    /// straight to the confirmation (checkmark + sound) and close shortly after.
-    /// The selection has already been persisted by the caller.
-    func confirmStyleSelection() {
-        styleTask?.cancel()
-        let generation = styleGeneration
-        guard panel?.isVisible == true, styleHostingView?.isHidden == false else { return }
-        styleHostingView?.rootView = StyleOverlayView(style: currentStyle, confirmed: true)
-        currentOnConfirm?()
-        styleTask = Task { [weak self] in
+    /// Called when the cycling hotkey is released: skip straight to the
+    /// confirmation (checkmark + sound) and close shortly after. The selection
+    /// has already been persisted by the caller.
+    func confirmSelectorSelection() {
+        selectorTask?.cancel()
+        let generation = selectorGeneration
+        guard panel?.isVisible == true, selectorHostingView?.isHidden == false, let currentSelector else { return }
+        selectorHostingView?.rootView = SelectorOverlayView(
+            title: currentSelector.title,
+            subtitle: currentSelector.subtitle,
+            systemImage: currentSelector.systemImage,
+            confirmed: true
+        )
+        currentSelectorOnConfirm?()
+        selectorTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(450))
-            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
+            guard let self, self.selectorGeneration == generation, !Task.isCancelled else { return }
             self.hide()
         }
     }
 
-    private func scheduleStyleConfirmation(after delayMillis: Int, generation: Int) {
-        styleTask = Task { [weak self] in
+    private func scheduleSelectorConfirmation(after delayMillis: Int, generation: Int) {
+        selectorTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(delayMillis))
-            guard let self, self.styleGeneration == generation, !Task.isCancelled else { return }
-            self.styleHostingView?.rootView = StyleOverlayView(style: self.currentStyle, confirmed: true)
-            self.currentOnConfirm?()
+            guard let self, self.selectorGeneration == generation, let currentSelector, !Task.isCancelled else { return }
+            self.selectorHostingView?.rootView = SelectorOverlayView(
+                title: currentSelector.title,
+                subtitle: currentSelector.subtitle,
+                systemImage: currentSelector.systemImage,
+                confirmed: true
+            )
+            self.currentSelectorOnConfirm?()
             try? await Task.sleep(for: .milliseconds(450))
-            guard self.styleGeneration == generation, !Task.isCancelled else { return }
+            guard self.selectorGeneration == generation, !Task.isCancelled else { return }
             self.hide()
         }
     }
 
-    /// Removes the pending style overlay (e.g. when a recording starts).
+    /// Removes a pending selector overlay (e.g. when a recording starts).
     /// Bumping the generation cancels the auto-hide task and invalidates any
     /// in-flight confirmation callback.
-    private func cancelStyleOverlay() {
-        styleGeneration += 1
-        styleTask?.cancel()
-        styleTask = nil
-        styleHostingView?.rootView = StyleOverlayView(style: .none, confirmed: false)
-        styleHostingView?.isHidden = true
+    private func cancelSelectorOverlay() {
+        selectorGeneration += 1
+        selectorTask?.cancel()
+        selectorTask = nil
+        currentSelector = nil
+        selectorHostingView?.rootView = SelectorOverlayView(
+            title: "",
+            subtitle: "",
+            systemImage: "",
+            confirmed: false
+        )
+        selectorHostingView?.isHidden = true
     }
 
     /// Removes a pending message overlay.
@@ -178,11 +236,16 @@ final class StatusOverlayPanel {
         hostingView.autoresizingMask = [.width, .height]
         wrapper.addSubview(hostingView)
 
-        let styleHostingView = NSHostingView(rootView: StyleOverlayView(style: .none, confirmed: false))
-        styleHostingView.frame = wrapper.bounds
-        styleHostingView.autoresizingMask = [.width, .height]
-        styleHostingView.isHidden = true
-        wrapper.addSubview(styleHostingView)
+        let selectorHostingView = NSHostingView(rootView: SelectorOverlayView(
+            title: "",
+            subtitle: "",
+            systemImage: "",
+            confirmed: false
+        ))
+        selectorHostingView.frame = wrapper.bounds
+        selectorHostingView.autoresizingMask = [.width, .height]
+        selectorHostingView.isHidden = true
+        wrapper.addSubview(selectorHostingView)
 
         let messageHostingView = NSHostingView(rootView: MessageOverlayView(title: "", detail: nil, icon: .info, tint: .white))
         messageHostingView.frame = wrapper.bounds
@@ -194,7 +257,7 @@ final class StatusOverlayPanel {
         panel.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
         self.panel = panel
         self.hostingView = hostingView
-        self.styleHostingView = styleHostingView
+        self.selectorHostingView = selectorHostingView
         self.messageHostingView = messageHostingView
     }
 
@@ -369,20 +432,22 @@ private struct LiveWaveformOverlay: View {
     }
 }
 
-/// Transient confirmation shown while cycling styles with the hotkey. The style
-/// icon occupies a single slot and morphs into a green checkmark right before
-/// the overlay closes. Pure presentation — the timing lives in the panel, which
-/// swaps `confirmed` and hides the overlay.
-private struct StyleOverlayView: View {
-    let style: TranscriptionStyle
+/// Transient confirmation shown while cycling a selection (style or translation
+/// target) with the hotkey. The icon occupies a single slot and morphs into a
+/// green checkmark right before the overlay closes. Pure presentation — the
+/// timing lives in the panel, which swaps `confirmed` and hides the overlay.
+private struct SelectorOverlayView: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
     let confirmed: Bool
 
     var body: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(style.title)
+                Text(title)
                     .font(.system(size: 15, weight: .semibold))
-                Text(style.whenToUse)
+                Text(subtitle)
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.75))
                     .lineLimit(1)
@@ -391,7 +456,7 @@ private struct StyleOverlayView: View {
 
             Spacer(minLength: 12)
 
-            Image(systemName: confirmed ? "checkmark.circle.fill" : style.systemImage)
+            Image(systemName: confirmed ? "checkmark.circle.fill" : systemImage)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(confirmed ? .green : .white)
                 .frame(width: 22)
