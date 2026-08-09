@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             insertion: TextInsertionService.shared,
             corrections: corrections,
             ducking: AudioDuckingService.shared,
+            mediaPlayback: MediaPlaybackPauser.shared,
             sounds: FeedbackSoundService.shared,
             modelContext: container.mainContext
         )

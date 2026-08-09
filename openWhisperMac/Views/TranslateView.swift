@@ -26,11 +26,15 @@ struct TranslateView: View {
                     }
 
                     ForEach(settings.translationTargets, id: \.self) { code in
-                        TargetLanguageCard(
+                        TargetLanguageRow(
                             language: Language.language(for: code) ?? Language(code: code, name: code),
                             isSelected: settings.translationTargetCode == code,
                             onSelect: { settings.translationTargetCode = code },
-                            onRemove: { settings.translationTargets.removeAll { $0 == code } }
+                            onToggleInCycle: { isInCycle in
+                                if !isInCycle {
+                                    settings.translationTargets.removeAll { $0 == code }
+                                }
+                            }
                         )
                         .disabled(!keyAvailable)
                     }
@@ -103,12 +107,13 @@ private struct NoneTargetCard: View {
     }
 }
 
-/// An enabled target language: tap to select, minus to remove from the cycle.
-private struct TargetLanguageCard: View {
+/// An enabled target language: tap to select; the toggle removes it from the
+/// cycle. Kept as a toggle row to match the rest of the settings.
+private struct TargetLanguageRow: View {
     let language: Language
     let isSelected: Bool
     let onSelect: () -> Void
-    let onRemove: () -> Void
+    let onToggleInCycle: (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -130,13 +135,10 @@ private struct TargetLanguageCard: View {
             }
             .buttonStyle(.plain)
 
-            Button(action: onRemove) {
-                Image(systemName: "minus.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-            .help("Remove from the cycle")
+            Toggle("", isOn: Binding(get: { true }, set: onToggleInCycle))
+                .labelsHidden()
+                .controlSize(.small)
+                .help("Include in the cycle")
         }
         .padding(12)
     }

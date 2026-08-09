@@ -2,6 +2,23 @@ import Foundation
 import ParakeetTDT
 import OpenWhisperShared
 
+/// What OpenWhisper does to other audio playing on the Mac while dictating.
+/// The public DMG build offers both; the App Store build only ever uses
+/// `.mute` (pausing relies on a private framework Apple disallows there).
+public enum MediaHandlingMode: String, CaseIterable, Identifiable, Sendable {
+    case mute
+    case pause
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .mute: return "Mute"
+        case .pause: return "Pause"
+        }
+    }
+}
+
 @MainActor @Observable
 public final class SettingsStore {
     /// Single shared instance. macOS wires the SwiftUI app and the
@@ -101,6 +118,24 @@ public final class SettingsStore {
     public var requireSecondEscapeToCancel: Bool {
         didSet {
             UserDefaults.standard.set(requireSecondEscapeToCancel, forKey: "settings.requireSecondEscape")
+        }
+    }
+
+    /// Whether dictation should pause or mute other audio (music, YouTube in a
+    /// browser) so it does not bleed into the microphone. Off = leave playback
+    /// untouched (and skip the output-volume duck).
+    public var mediaHandlingEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(mediaHandlingEnabled, forKey: "settings.mediaHandlingEnabled")
+        }
+    }
+
+    /// How media is handled while dictating: `.mute` sets the output volume to
+    /// zero for the duration (App Store-safe); `.pause` pauses playback via a
+    /// private framework and resumes it at the same position (public DMG only).
+    public var mediaHandlingMode: MediaHandlingMode {
+        didSet {
+            UserDefaults.standard.set(mediaHandlingMode.rawValue, forKey: "settings.mediaHandlingMode")
         }
     }
 
@@ -254,6 +289,9 @@ public final class SettingsStore {
         microphoneBoostEnabled = defaults.object(forKey: "settings.microphoneBoost") as? Bool ?? true
         transcribeShortQuietClipsAggressively = defaults.object(forKey: "settings.aggressiveShortClips") as? Bool ?? true
         requireSecondEscapeToCancel = defaults.object(forKey: "settings.requireSecondEscape") as? Bool ?? false
+        mediaHandlingEnabled = defaults.object(forKey: "settings.mediaHandlingEnabled") as? Bool ?? true
+        mediaHandlingMode = defaults.string(forKey: "settings.mediaHandlingMode")
+            .flatMap(MediaHandlingMode.init(rawValue:)) ?? .pause
         var style = defaults.string(forKey: "settings.formattingStyle").flatMap(TranscriptionStyle.init(rawValue:)) ?? .formal
         // Legacy installs that had the AI rewrite toggle off map to NONE.
         if defaults.object(forKey: "settings.formattingEnabled") as? Bool == false {

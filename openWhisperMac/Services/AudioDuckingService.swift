@@ -2,25 +2,25 @@ import CoreAudio
 import CoreAudioKit
 import Foundation
 
-/// Lowers the system output volume while recording so the user can hear
-/// themselves think, and restores it when dictation ends. Pure CoreAudio —
-/// no AppleScript, no private API. Default duck level 0.2 (20% of current).
+/// Lowers or mutes the system output while recording and restores it when
+/// dictation ends. Pure CoreAudio — no AppleScript, no private API. `duck(to:)`
+/// sets an absolute output level (0.0 for a full mute); `isOutputPlaying` tells
+/// whether anything is actually producing audio so muting can be skipped when
+/// nothing is playing.
 @MainActor
 final class AudioDuckingService {
     static let shared = AudioDuckingService()
-
-    var duckLevel: Double = 0.2
 
     private var isDucked = false
     private var savedVolume: Double = 1.0
 
     private init() {}
 
-    func duck() {
+    func duck(to level: Double) {
         guard !isDucked else { return }
         guard let current = Self.readVolume() else { return }
         savedVolume = current
-        Self.writeVolume(current * max(0, min(1, duckLevel)))
+        Self.writeVolume(max(0, min(1, level)))
         isDucked = true
     }
 
@@ -28,6 +28,21 @@ final class AudioDuckingService {
         guard isDucked else { return }
         Self.writeVolume(savedVolume)
         isDucked = false
+    }
+
+    /// Whether the default output device is currently running (i.e. some app is
+    /// playing sound). Used to skip muting when nothing is playing.
+    static func isOutputPlaying() -> Bool {
+        guard let deviceID = defaultOutputDeviceID() else { return false }
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var running: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &running)
+        return status == noErr && running != 0
     }
 
     // MARK: - CoreAudio volume

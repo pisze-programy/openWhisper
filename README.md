@@ -116,7 +116,7 @@ iOS demos coming soon.
 - **Auto-paste** — into frontmost app (Accessibility); auto-copy too
 - **AI formatting** — Formal · Casual · Minimal · Brief (OpenRouter, optional)
 - **Translation** — dictation translated into the target chosen with right ⌘+⇧
-- **Audio ducking** — auto volume down during recording
+- **Media handling** — pause music/video (Music, Spotify, YouTube) while dictating and resume where it stopped (public build); the App Store build mutes the output instead
 - **Timeline history** — grouped by day, tap to copy
 - **Launch at login**
 - **25 European languages** — punctuation + number normalization
@@ -180,10 +180,17 @@ scripts/make-dmg.sh    one-command Release build → DMG
 
 - **macOS 1.0** — core STT, overlay, history, settings, DMG
 - **macOS 1.1–1.3** — AI formatting styles, translation target cycle (right ⌘+⇧), Translate tab, shared selector overlay, UX polish
+- **macOS 1.4** — media handling while dictating (pause on the public build, mute on the App Store build), Release-Store build config
 - **Keyboard extension** (maybe) — dictate-anywhere on iPhone
 - **App Store** — macOS (and iOS), free on-device core
 
 Details and decisions: [PLAN.md](PLAN.md) · [PLAN_MACOS.md](PLAN_MACOS.md).
+
+---
+
+## Release notes
+
+- **v1.4** — Media handling while dictating: pause playback (Music/Spotify/YouTube) and resume where it stopped on the public build; the App Store build mutes the output instead. Toggle in Settings → Dictation.
 
 ---
 

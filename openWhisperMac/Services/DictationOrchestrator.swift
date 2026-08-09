@@ -30,6 +30,7 @@ final class DictationOrchestrator {
     private let insertion: TextInsertionService
     private let corrections: CorrectionsStore?
     private let ducking: AudioDuckingService
+    private let mediaPlayback: MediaPlaybackPauser
     private let sounds: FeedbackSoundService
     private let modelContext: ModelContext?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "dictation")
@@ -53,6 +54,7 @@ final class DictationOrchestrator {
         insertion: TextInsertionService,
         corrections: CorrectionsStore?,
         ducking: AudioDuckingService,
+        mediaPlayback: MediaPlaybackPauser,
         sounds: FeedbackSoundService,
         modelContext: ModelContext?
     ) {
@@ -64,6 +66,7 @@ final class DictationOrchestrator {
         self.insertion = insertion
         self.corrections = corrections
         self.ducking = ducking
+        self.mediaPlayback = mediaPlayback
         self.sounds = sounds
         self.modelContext = modelContext
     }
@@ -81,12 +84,12 @@ final class DictationOrchestrator {
         activeTask = Task { [weak self] in
             guard let self else { return }
             self.sounds.play(.recordingStarted)
-            self.ducking.duck()
+            self.beginAudioSuppression()
             do {
                 try await self.recorder.start()
                 self.setPhase(.listening)
             } catch {
-                self.ducking.restore()
+                self.endAudioSuppression()
                 self.setPhase(.failed(error.localizedDescription))
             }
         }
@@ -108,7 +111,7 @@ final class DictationOrchestrator {
 
     func cancel() {
         recorder.cancel()
-        ducking.restore()
+        endAudioSuppression()
         targetAppProcessID = nil
         recordingStyle = nil
         recordingTranslationTarget = nil
@@ -130,14 +133,14 @@ final class DictationOrchestrator {
         do {
             try await transcription.waitForModelReady()
         } catch {
-            ducking.restore()
+            endAudioSuppression()
             sounds.play(.error)
             setPhase(.failed(error.localizedDescription))
             return
         }
 
         guard transcription.isModelReady else {
-            ducking.restore()
+            endAudioSuppression()
             sounds.play(.error)
             setPhase(.failed("The speech model is not ready."))
             return
@@ -151,11 +154,11 @@ final class DictationOrchestrator {
         )
         switch decision {
         case .discardTooShort:
-            ducking.restore()
+            endAudioSuppression()
             setPhase(.failed("Too short — hold the hotkey a moment longer."))
             return
         case .discardNoSpeech:
-            ducking.restore()
+            endAudioSuppression()
             setPhase(.failed("No speech detected."))
             return
         case .transcribe:
@@ -168,7 +171,7 @@ final class DictationOrchestrator {
             let result = try await transcription.transcribe(samples: padded)
             var text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else {
-                ducking.restore()
+                endAudioSuppression()
                 setPhase(.failed("No speech detected."))
                 return
             }
@@ -245,17 +248,50 @@ final class DictationOrchestrator {
                 }
             }
 
-            ducking.restore()
+            endAudioSuppression()
             sounds.play(.transcriptionSuccess)
             setPhase(.done)
         } catch {
-            ducking.restore()
+            endAudioSuppression()
             sounds.play(.error)
             setPhase(.failed(error.localizedDescription))
         }
     }
 
     // MARK: - Helpers
+
+    /// The media mode actually applied in this build. App Store builds never
+    /// pause — pausing relies on a private framework Apple disallows there, so
+    /// it degrades to muting.
+    private var effectiveMediaMode: MediaHandlingMode {
+#if APP_STORE
+        .mute
+#else
+        settings.mediaHandlingMode
+#endif
+    }
+
+    /// Quiets the audio environment for a recording session: pause whatever is
+    /// playing, or mute the output to zero when nothing can be paused.
+    private func beginAudioSuppression() {
+        guard settings.mediaHandlingEnabled else { return }
+        switch effectiveMediaMode {
+        case .mute:
+            if AudioDuckingService.isOutputPlaying() {
+                ducking.duck(to: 0)
+            }
+        case .pause:
+            mediaPlayback.startSession()
+        }
+    }
+
+    /// Restores the audio environment after the session. Both services are
+    /// idempotent (a no-op unless they actually changed something), so this is
+    /// safe to call unconditionally — even if the setting changed mid-recording.
+    private func endAudioSuppression() {
+        ducking.restore()
+        mediaPlayback.endSession()
+    }
 
     private func setPhase(_ phase: Phase) {
         self.phase = phase
