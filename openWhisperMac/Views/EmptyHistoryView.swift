@@ -97,7 +97,7 @@ private struct SampleCard: Identifiable {
         SampleCard(style: "Casual", icon: "bubble.left", duration: "0:08",
                    text: "Hey, are you free tomorrow? Let's grab lunch and catch up. I found this great new place near the office."),
         SampleCard(style: "Minimal", icon: "scissors", duration: "0:06",
-                   text: "hey just got home, traffic was crazy but made it, call you later"),
+                   text: "hey just got home traffic was crazy but made it call you later"),
         SampleCard(style: "Brief", icon: "list.bullet", duration: "0:05",
                    text: "• Schedule dentist appointment\n• Pick up dry cleaning\n• Send quarterly numbers to Alex"),
     ]

@@ -11,8 +11,9 @@ public enum CasualPrompt {
     - Break the text into sentences with standard punctuation and capitalization.
     - Remove filler words, false starts, and accidental repetitions silently. Resolve
       self-corrections by keeping only the corrected version.
-    - Use a relaxed, friendly tone — as if talking to a colleague or friend. Contractions
-      are fine (\"it's\", \"don't\", \"we're\").
+    - Use a relaxed, friendly tone — as if writing to someone you know but would still
+      write properly to, not a close friend texting in shorthand. Contractions are fine
+      (\"it's\", \"don't\", \"we're\").
     - Do NOT add facts, opinions, emoji, interjections, or any content the speaker did not say.
     - Do NOT add ALL CAPS or exaggerated punctuation.
     - Respond in the same language as the input.

@@ -6,7 +6,7 @@ extension TranscriptionStyle {
         case .none: return "No AI rewrite — fast, local, no API."
         case .formal: return "Complete sentences, no filler words."
         case .casual: return "Natural conversation, light polish."
-        case .veryCasual: return "Just fix speech artifacts, keep your words."
+        case .veryCasual: return "A fast text to a close friend — no caps, no punctuation, no apostrophes."
         case .brief: return "Condense into a tight, key-point summary."
         }
     }
@@ -29,8 +29,8 @@ extension TranscriptionStyle {
         switch self {
         case .none: return "Fast, local, no AI — raw transcript"
         case .formal: return "Emails, reports, documentation"
-        case .casual: return "Messages, chat, everyday notes"
-        case .veryCasual: return "When you want your exact words, just cleaned up"
+        case .casual: return "Chats, emails to people you don't know well"
+        case .veryCasual: return "Texting close friends — fast, no caps, no punctuation"
         case .brief: return "Meeting notes, action items, summaries"
         }
     }
