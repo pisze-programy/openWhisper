@@ -12,11 +12,11 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsSection("API Key") {
-                    ApiKeyRow(keyName: AppGroup.cloudApiKeyKey, placeholder: "sk-or-...")
+                    ApiKeyRow(placeholder: "sk-or-...")
                     ShortcutHintRow(
                         icon: "key.fill",
                         tint: .secondary,
-                        text: "Used by AI formatting and translations. Stored only on this device."
+                        text: "Used by AI formatting and translations. Stored in your Mac's Keychain."
                     )
                 }
 
@@ -57,6 +57,11 @@ struct SettingsView: View {
                                 LaunchAtLoginService.apply(newValue)
                             }
                         )
+                    )
+                    ToggleRow(
+                        "Share anonymous usage stats",
+                        description: "Reports only usage counters (feature, language, outcome). Never your transcript text.",
+                        isOn: $settings.usageAnalyticsEnabled
                     )
                 }
 
@@ -225,7 +230,6 @@ private struct PermissionStatusRow: View {
 }
 
 struct ApiKeyRow: View {
-    let keyName: String
     let placeholder: String
     @State private var text: String = ""
 
@@ -239,14 +243,13 @@ struct ApiKeyRow: View {
                 .textFieldStyle(.roundedBorder)
                 .font(.system(.body, design: .monospaced))
                 .onChange(of: text) { _, newValue in
-                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                    UserDefaults.standard.set(trimmed, forKey: keyName)
+                    OpenRouterApiKeyStore.set(newValue)
                 }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .onAppear {
-            text = UserDefaults.standard.string(forKey: keyName) ?? ""
+            text = OpenRouterApiKeyStore.value
         }
     }
 }

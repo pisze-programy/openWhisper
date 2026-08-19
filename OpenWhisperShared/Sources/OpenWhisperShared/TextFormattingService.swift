@@ -19,7 +19,7 @@ public final class TextFormattingService {
     /// Whether an OpenRouter API key is configured. UI uses this to warn that a
     /// non-NONE style cannot be applied without a key.
     public static var hasApiKey: Bool {
-        !storedApiKey.isEmpty
+        OpenRouterApiKeyStore.hasValue
     }
 
     /// Rewrites `text` in `style`. Never throws — on any failure it returns the
@@ -45,9 +45,10 @@ public final class TextFormattingService {
         sourceLanguageCode: String?,
         targetLanguageCode: String?
     ) async -> String? {
-        let apiKey = Self.storedApiKey
+        let apiKey = OpenRouterApiKeyStore.value
         guard !apiKey.isEmpty, !text.isEmpty else { return nil }
         let client = OpenRouterFormattingClient(apiKey: apiKey)
+        let began = Date()
         do {
             let formatted = try await client.format(
                 text: text,
@@ -56,8 +57,18 @@ public final class TextFormattingService {
                 targetLanguageCode: targetLanguageCode
             )
             let trimmed = formatted.trimmingCharacters(in: .whitespacesAndNewlines)
+            report(
+                .formatAndTranslate,
+                ok: !trimmed.isEmpty,
+                latency: began,
+                chars: text.count,
+                style: style,
+                source: sourceLanguageCode,
+                target: targetLanguageCode
+            )
             return trimmed.isEmpty ? nil : trimmed
         } catch {
+            report(.formatAndTranslate, ok: false, latency: began, chars: text.count, style: style, source: sourceLanguageCode, target: targetLanguageCode)
             logger.error("AI formatting+translation failed (\(error.localizedDescription, privacy: .public))")
             return nil
         }
@@ -71,9 +82,10 @@ public final class TextFormattingService {
         sourceLanguageCode: String?,
         targetLanguageCode: String?
     ) async -> String? {
-        let apiKey = Self.storedApiKey
+        let apiKey = OpenRouterApiKeyStore.value
         guard !apiKey.isEmpty, !text.isEmpty else { return nil }
         let client = OpenRouterFormattingClient(apiKey: apiKey)
+        let began = Date()
         do {
             let translated = try await client.translate(
                 text: text,
@@ -81,32 +93,59 @@ public final class TextFormattingService {
                 targetLanguageCode: targetLanguageCode
             )
             let trimmed = translated.trimmingCharacters(in: .whitespacesAndNewlines)
+            report(
+                .translateOnly,
+                ok: !trimmed.isEmpty,
+                latency: began,
+                chars: text.count,
+                style: .none,
+                source: sourceLanguageCode,
+                target: targetLanguageCode
+            )
             return trimmed.isEmpty ? nil : trimmed
         } catch {
+            report(.translateOnly, ok: false, latency: began, chars: text.count, style: .none, source: sourceLanguageCode, target: targetLanguageCode)
             logger.error("AI translation failed (\(error.localizedDescription, privacy: .public))")
             return nil
         }
     }
 
     private func perform(text: String, style: TranscriptionStyle) async -> String? {
-        let apiKey = Self.storedApiKey
+        let apiKey = OpenRouterApiKeyStore.value
         guard !apiKey.isEmpty, !text.isEmpty else { return nil }
 
         let client = OpenRouterFormattingClient(apiKey: apiKey)
+        let began = Date()
         do {
             let formatted = try await client.format(text: text, style: style)
             let trimmed = formatted.trimmingCharacters(in: .whitespacesAndNewlines)
+            report(.format, ok: !trimmed.isEmpty, latency: began, chars: text.count, style: style, source: nil, target: nil)
             return trimmed.isEmpty ? nil : trimmed
         } catch {
+            report(.format, ok: false, latency: began, chars: text.count, style: style, source: nil, target: nil)
             logger.error("AI formatting failed (\(error.localizedDescription, privacy: .public))")
             return nil
         }
     }
 
-    private static var storedApiKey: String {
-        let key = UserDefaults.standard.string(forKey: AppGroup.cloudApiKeyKey)
-            ?? UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.cloudApiKeyKey)
-            ?? ""
-        return key.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func report(
+        _ feature: UsageAnalytics.Feature,
+        ok: Bool,
+        latency began: Date,
+        chars: Int,
+        style: TranscriptionStyle,
+        source: String?,
+        target: String?
+    ) {
+        let latencyMs = Int(max(0, Date().timeIntervalSince(began)) * 1000)
+        UsageAnalytics.track(UsageAnalytics.Event(
+            feature: feature,
+            ok: ok,
+            latencyMs: latencyMs,
+            chars: chars,
+            style: style.rawValue,
+            sourceLanguage: source,
+            targetLanguage: target
+        ))
     }
 }

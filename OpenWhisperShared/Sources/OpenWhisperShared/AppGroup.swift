@@ -7,6 +7,7 @@ public enum AppGroup {
     public static let languageCodeKey = "settings.languageCode"
     public static let autoStopOnSilenceKey = "settings.autoStopOnSilence"
     public static let autoStopSilenceSecondsKey = "settings.autoStopSilenceSeconds"
+    public static let usageAnalyticsEnabledKey = "settings.usageAnalyticsEnabled"
 
     public static var containerURL: URL {
         #if os(macOS)

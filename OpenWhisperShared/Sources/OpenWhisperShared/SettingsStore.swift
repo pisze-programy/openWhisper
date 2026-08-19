@@ -241,6 +241,16 @@ public final class SettingsStore {
         }
     }
 
+    /// Whether anonymous usage analytics may be reported to the analytics
+    /// Worker (counters only — feature, language, outcome, latency; never the
+    /// transcript text). Default on; can be turned off in Settings.
+    public var usageAnalyticsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(usageAnalyticsEnabled, forKey: AppGroup.usageAnalyticsEnabledKey)
+            UserDefaults(suiteName: AppGroup.identifier)?.set(usageAnalyticsEnabled, forKey: AppGroup.usageAnalyticsEnabledKey)
+        }
+    }
+
     public static let maxRecordingDuration: TimeInterval = 600
 
     /// App-side read of the silence auto-stop toggle (default on).
@@ -299,6 +309,7 @@ public final class SettingsStore {
         }
         formattingStyle = style
         launchAtLogin = defaults.object(forKey: "settings.launchAtLogin") as? Bool ?? true
+        usageAnalyticsEnabled = defaults.object(forKey: AppGroup.usageAnalyticsEnabledKey) as? Bool ?? true
         translationTargetCode = defaults.string(forKey: "settings.translationTargetCode")
         translationTargets = defaults.stringArray(forKey: "settings.translationTargets") ?? ["pl", "en"]
         // A persisted target that is no longer in the cycle list (e.g. from a

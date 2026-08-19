@@ -5,7 +5,9 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 ## Decisions locked so far
 
 - **First submission:** macOS only. iOS follows in a later cycle.
-- **AI formatting & translation backend:** Cloudflare Worker proxy holding the OpenRouter key server-side (no user-supplied key). Worker also provides per-device usage analytics ("who and how").
+- **AI formatting & translation backend:** **BYOK stays** — user keeps their own OpenRouter key, stored **in Keychain** (not UserDefaults). **No LLM on the Worker.**
+- **Analytics:** lightweight Cloudflare Worker endpoint collecting **counters only** (feature, language, outcome, latency), keyed by an **install UUID**. No transcript text ever leaves via analytics.
+- **Prompts:** built client-side (`PromptComposer`), as today.
 - **Keyboard extension + widget:** stay OUT of the submitted archive (not embedded). iOS clean-up deferred to Stage 5.
 
 ## Process
@@ -20,27 +22,27 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 - [x] Review the codebase for App Store readiness (done: entitlements, build configs, network flows, data storage, permissions).
 - [x] Write this plan file.
 
-## Stage 1 — Cloudflare Worker backend (replaces BYOK)
+## Stage 1 — Keychain + lightweight usage analytics (revised 2026-08-19)
+
+> Decision: **no LLM proxy on the Worker.** Formatting/translation keep calling OpenRouter directly with the user's own key (BYOK), now stored in the Keychain. The Worker only collects anonymized counters.
+
+### Keychain (OpenWhisperShared)
+- [x] `KeychainStore` — generic-password read/write/delete wrapper (`Security` framework).
+- [x] `OpenRouterApiKeyStore` — API key in Keychain, auto-migrates the legacy UserDefaults/App Group value.
+- [x] `InstallID` — stable random UUID in Keychain (survives app updates), used for analytics.
+- [x] Wire `TextFormattingService` + `SettingsView`/`SettingsKeyboardSection` to the Keychain store.
+- [x] Settings toggle `usageAnalyticsEnabled` (default ON, user-visible disclosure).
 
 ### Worker (new `server/` directory)
-- [ ] Wrangler Worker in TypeScript (`server/`), `wrangler.toml`.
-- [ ] KV namespace for device registry + rate limits; secrets (`OPENROUTER_API_KEY`) — never in the client.
-- [ ] `POST /v1/device/register` — validates `DCDevice.generateToken()` against Apple's DeviceCheck query API, issues a short-lived HMAC session token bound to `device_id`.
-- [ ] `POST /v1/format` — verifies session token, validates payload (size caps, allowed style/target enum), relays to OpenRouter `chat/completions`, returns text.
-- [ ] Per-device rate limit (e.g. 50 formatting calls/day) in KV.
-- [ ] Usage analytics — Workers Analytics Engine / KV: device hash, feature, language, success/error, latency. **No transcript content stored.**
-- [ ] `server/README.md` — deploy steps: `wrangler login`, `wrangler secret put`, `wrangler deploy`.
-
-### macOS app changes
-- [ ] `WorkerFormattingClient` (URLSession → Worker) replacing direct OpenRouter calls for formatting/translation.
-- [ ] Device token: `DCDevice.generateToken()` with fallback to a local install UUID (Keychain) when unavailable.
-- [ ] `TextFormattingService` routed through the Worker.
-- [ ] Remove BYOK API-key UI from macOS `SettingsView` + `ApiKeyRequiredBanner`.
-- [ ] Update copy (Settings/onboarding) to reflect the new flow.
+- [x] Wrangler Worker, `POST /v1/track` — validates payload (size caps, enums), **stores no content**.
+- [x] Rate limiting per install ID + per IP (KV).
+- [x] Daily aggregation counters in KV (feature × outcome × language) + DAU install-ID set.
+- [x] `wrangler.toml`, `README.md` (deploy steps: `wrangler kv namespace create`, `wrangler deploy`).
+- [x] Analytics client `UsageAnalytics` — fire-and-forget counters from the app (feature, language, ok/fail, latency, chars). Never content.
 
 ### Open decisions for this stage
-- [ ] DeviceCheck token vs. install-UUID only (cost of abuse: worker usage is paid by us).
-- [ ] Prompts built client-side (keep `PromptComposer`) vs. server-side (more control, duplicates logic).
+- [x] ~~DeviceCheck token vs. install-UUID only~~ → **install-UUID only** (decided; no paid-billing exposure since no LLM proxying).
+- [x] ~~Prompts client-side vs. server-side~~ → **client-side** (decided).
 
 ## Stage 2 — Sandbox + privacy manifest (hard blockers)
 

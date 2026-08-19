@@ -18,14 +18,10 @@ struct SettingsKeyboardSection: View {
             Text("Used to rewrite transcripts with AI. Your API key stays on this device.")
         }
         .onAppear {
-            apiKey = UserDefaults.standard.string(forKey: AppGroup.cloudApiKeyKey)
-                ?? UserDefaults(suiteName: AppGroup.identifier)?.string(forKey: AppGroup.cloudApiKeyKey)
-                ?? ""
+            apiKey = OpenRouterApiKeyStore.value
         }
         .onChange(of: apiKey) { _, newValue in
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            UserDefaults(suiteName: AppGroup.identifier)?.set(trimmed, forKey: AppGroup.cloudApiKeyKey)
-            UserDefaults.standard.set(trimmed, forKey: AppGroup.cloudApiKeyKey)
+            OpenRouterApiKeyStore.set(newValue)
         }
     }
 }
