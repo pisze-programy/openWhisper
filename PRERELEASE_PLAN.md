@@ -72,13 +72,18 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 
 ## Stage 4 — App Store Connect (human + prep)
 
-- [ ] App record for `piszeprogramy.openWhisper.mac`.
-- [ ] Screenshots (macOS 26 sizes) + previews.
-- [ ] Description, promo text, keywords (drafts kept in this repo).
-- [ ] App Privacy label: User Content (transcripts when cloud formatting/translation enabled), Usage Data (per-device analytics), Diagnostics (none).
-- [ ] Export compliance: HTTPS only via URLSession → no-encryption declaration.
+- [x] Metadata drafts: `docs/app-store-metadata.md` (description, promo text, keywords, subtitle, what's-new, support URL).
+- [x] Privacy label answers: `docs/app-store-privacy-label.md` (User Content + Usage Data + Device ID, all not-linked, no tracking).
+- [x] Export compliance answers: `docs/export-compliance.md` (HTTPS-only, no custom encryption).
+- [x] App name "OpenWhisper" availability check — no exact match on iOS/macOS; OpenAI "Whisper" etc. exist but are distinct (M7).
+- [x] Final secret scan — 0 matches (M8 adjacent).
+- [ ] ~~Screenshots~~ — blocked on Screen Recording TCC in terminal; take manually on the final signed build (macOS 26, 6.5"/8"/13" sizes).
+- [ ] App record for `piszeprogramy.openWhisper.mac` (needs account).
+- [ ] Description, promo text, keywords — paste from `docs/app-store-metadata.md`.
+- [ ] App Privacy label — answer per `docs/app-store-privacy-label.md`.
+- [ ] Export compliance — answer per `docs/export-compliance.md`.
 - [ ] EULA (Apple standard), support URL, copyright.
-- [ ] App ID capabilities: App Group, DeviceCheck; distribution cert + provisioning.
+- [ ] App ID capabilities: App Group, DeviceCheck; distribution cert + provisioning (needs account).
 - [ ] Bump build (`CURRENT_PROJECT_VERSION`), TestFlight beta before submission.
 
 ## Stage 5 — Cleanup & quality (non-blocking, mostly iOS)
@@ -87,6 +92,7 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 - [ ] Widget: invalid `IPHONEOS_DEPLOYMENT_TARGET=26.5`, empty `AppIcon.appiconset` — decide keep-out-of-archive vs. fix.
 - [ ] Keyboard: `RequestsOpenAccess=true` + microphone string mismatch — stays out of archive.
 - [ ] Unit/UI tests for core flows (STT → format → insert).
+- [x] Shared-package unit tests extended: Keychain store (cache round-trip, invalidation), API-key migration from legacy UserDefaults, InstallID stability, analytics payload privacy guard (no transcript fields).
 - [ ] Final secret scan (no `sk-` values in repo).
 
 ---
