@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenWhisper Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    line-height: 1.6;
+    color: #1d1d1f;
+    background: #fff;
+  }
+  @media (prefers-color-scheme: dark) { body { color: #f5f5f7; background: #000; } }
+  h1 { font-size: 1.7rem; margin-bottom: .2rem; }
+  h2 { font-size: 1.25rem; margin-top: 2rem; }
+  p, li { margin-bottom: .6rem; }
+  .meta { color: #86868b; font-size: .9rem; margin-bottom: 2rem; }
+  strong { font-weight: 600; }
+  footer { margin-top: 3rem; color: #86868b; font-size: .85rem; }
+</style>
+</head>
+<body>
+<h1>OpenWhisper Privacy Policy</h1>
+<p class="meta"><em>Last updated: August 19, 2026</em></p>
+
+<p>OpenWhisper is a speech-to-text app for macOS and iPhone made by pisze-programy.
+This policy explains what data the app processes, where it goes, and how you can
+control it. "OpenWhisper" means the OpenWhisper app on any platform.</p>
+
+<h2>The short version</h2>
+<ul>
+  <li><strong>Speech is transcribed on your device.</strong> Your microphone audio is processed locally by an on-device speech model and is not uploaded by OpenWhisper.</li>
+  <li><strong>Transcript text stays local by default.</strong> Nothing you dictate leaves your device unless you turn on <strong>AI formatting</strong> or <strong>translation</strong>.</li>
+  <li><strong>AI formatting and translation are opt-in.</strong> When enabled, the transcript text is sent to <strong>OpenRouter</strong>, a third-party AI provider, using your own OpenRouter API key. This happens only when you choose to use those features.</li>
+  <li><strong>Anonymous usage analytics are opt-in.</strong> We may receive usage counters only — never your audio or transcript text.</li>
+  <li><strong>No account, no sign-up.</strong> We have no way to contact you or to identify you personally.</li>
+</ul>
+
+<h2>What we process and where it goes</h2>
+
+<h3>1. Microphone audio — on-device only</h3>
+<p>When you dictate, OpenWhisper records your speech from the microphone. The audio is transcribed to text locally using a speech model that runs on your device. Your audio is not uploaded to OpenWhisper servers or to OpenRouter.</p>
+
+<h3>2. Transcript text — stays on your device by default</h3>
+<p>Your transcribed text is kept locally (for example in your on-device history, which you can clear at any time). It is not transmitted anywhere unless you enable AI formatting or translation.</p>
+
+<h3>3. AI formatting and translation — sent to OpenRouter only when you turn them on</h3>
+<p>If you enable <strong>AI formatting</strong> (rewriting your text in a selected style) or <strong>translation</strong>, the transcript text is sent to <strong>OpenRouter</strong> (https://openrouter.ai) using an API key that you provide yourself in the app's Settings. OpenRouter routes the request to one of its supported AI models. This is your choice: leave formatting set to "None" and no text is ever sent.</p>
+<p>Because the request uses <strong>your own</strong> API key, it is billed to you and appears in your OpenRouter account's usage. Please also see OpenRouter's own privacy policy and terms for how they handle the text you send them.</p>
+
+<h3>4. Anonymous usage analytics — opt-in, counters only</h3>
+<p>If you leave the "Share anonymous usage stats" setting enabled, the app reports basic usage counters to our analytics service (a Cloudflare Worker). These counters include things like the feature used (formatting vs. translation), the formatting style, the language, whether the request succeeded, response latency, and the character count of the text. They are tied to a random, per-install identifier that cannot be traced back to you. <strong>No audio and no transcript text is ever included.</strong> You can disable this at any time in Settings; disabling it stops all reporting immediately.</p>
+
+<h3>5. Speech model download</h3>
+<p>On first use the app downloads a speech model (~480 MB) from Hugging Face so that transcription can run on your device. This is a one-time download.</p>
+
+<h2>Storage and security</h2>
+<ul>
+  <li>The OpenRouter API key you provide is stored in your system's <strong>Keychain</strong>, not in plain text on disk.</li>
+  <li>History is stored locally on your device. You can delete individual entries or clear your history from the app at any time.</li>
+  <li>No OpenWhisper server stores your audio, transcript text, or API key.</li>
+</ul>
+
+<h2>Data deletion</h2>
+<p>Because we do not collect accounts and our analytics store only anonymous counters, there is nothing to delete on our side. Your local data — history, recovery audio, and settings — is fully under your control and can be removed by clearing the app's data or uninstalling the app.</p>
+
+<h2>Third-party services</h2>
+<p>When you use AI formatting or translation, OpenRouter receives your transcript text and your API key authorizes the request. OpenRouter's privacy policy is available at https://openrouter.ai/privacy. When you download the speech model, Hugging Face processes the download request. We are not responsible for the practices of these third parties.</p>
+
+<h2>Changes to this policy</h2>
+<p>We may update this policy from time to time. When we do, we will revise the "last updated" date above.</p>
+
+<h2>Contact</h2>
+<p>For questions about this policy, open an issue at https://github.com/pisze-programy/openWhisper.</p>
+
+<footer>Source: <a href="privacy-policy.md">privacy-policy.md</a> in the open source repo.</footer>
+</body>
+</html>
