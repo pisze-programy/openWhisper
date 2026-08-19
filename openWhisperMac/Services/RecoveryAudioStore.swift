@@ -1,8 +1,10 @@
 import Foundation
+import OpenWhisperShared
 
 /// Streams the live recording to a recovery WAV on disk so an audio-engine crash
 /// or app quit never loses the user's last dictation. Written asynchronously on
-/// a serial utility queue so the audio path is never blocked.
+/// a serial utility queue so the audio path is never blocked. Raw audio is
+/// excluded from iCloud/Time Machine backups.
 final class RecoveryAudioStore {
     private let directory: URL
     private let writeQueue = DispatchQueue(label: "com.openwhisper.mac.recovery", qos: .utility)
@@ -14,10 +16,17 @@ final class RecoveryAudioStore {
     static let sampleRate: Int = 16_000
 
     init() {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("OpenWhisper", isDirectory: true)
+        let base = AppGroup.containerURL
         directory = base.appendingPathComponent("dictation-recovery", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        excludeFromBackup(directory)
+    }
+
+    private func excludeFromBackup(_ url: URL) {
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
     }
 
     func startNewRecording() {

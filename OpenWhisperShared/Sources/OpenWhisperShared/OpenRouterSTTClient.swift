@@ -49,7 +49,6 @@ public struct OpenRouterSTTClient: Sendable {
                 "data": wavData.base64EncodedString(),
                 "format": "wav",
             ],
-            "session_id": DeviceSessionID.value,
         ]
         if let language {
             body["language"] = language

@@ -33,7 +33,10 @@ let package = Package(
     targets: [
         .target(
             name: "ParakeetTDT",
-            path: "Sources/ParakeetTDT"
+            path: "Sources/ParakeetTDT",
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .executableTarget(
             name: "ParakeetCLI",

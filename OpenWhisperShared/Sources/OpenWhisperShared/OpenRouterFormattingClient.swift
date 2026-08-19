@@ -86,7 +86,6 @@ public struct OpenRouterFormattingClient: Sendable {
                 ["role": "user", "content": DictationInputBoundary.wrap(text)],
             ],
             "temperature": temperature,
-            "session_id": DeviceSessionID.value,
         ]
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)

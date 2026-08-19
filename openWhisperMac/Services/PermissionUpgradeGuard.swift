@@ -24,11 +24,16 @@ enum PermissionUpgradeGuard {
 
         guard let previous, previous != current, let bundleID = Bundle.main.bundleIdentifier else { return }
 
+        // App Store builds run in the sandbox, where spawning `/usr/bin/tccutil`
+        // is blocked — the user must re-grant Accessibility manually if macOS
+        // dropped it. The public build can reset it automatically.
+        #if !APP_STORE
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
         process.arguments = ["reset", "Accessibility", bundleID]
         try? process.run()
         process.waitUntilExit()
+        #endif
 
         let options = ["AXTrustedCheckOptionPrompt" as CFString: true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)

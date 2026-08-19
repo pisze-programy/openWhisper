@@ -48,13 +48,18 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 
 ## Stage 2 — Sandbox + privacy manifest (hard blockers)
 
-- [ ] Enable App Sandbox (`com.apple.security.app-sandbox=true`) in `Release-Store` entitlements + add `application-groups` (team-prefixed).
-- [ ] Verify at runtime in sandbox: Accessibility insert/paste (`TextInsertionService`), global hotkey monitor (`HotkeyManager`), `CGEvent` paste, `SMAppService.mainApp` login item.
-- [ ] FluidAudio model cache (~460 MB + silero-vad) → sandbox container / App Group; check if FluidAudio exposes a custom cache directory API; else confirm re-download on first launch.
-- [ ] `RecoveryAudioStore` → container path + `isExcludedFromBackup` (currently raw audio backs up to iCloud/Time Machine).
-- [ ] `PrivacyInfo.xcprivacy` for the macOS app: required-reason APIs (UserDefaults CA92.1, file timestamps, boot time if used), `NSPrivacyTracking=false`.
-- [ ] Verify/add privacy manifests for `FluidAudio` and `parakeet-coreml` SPM packages (or App Store warnings).
-- [ ] `DeviceSessionID`: remove broken iCloud KV sync (no entitlement) + stop sending `session_id` to OpenRouter; replace with Keychain install UUID.
+- [x] Enable App Sandbox (`com.apple.security.app-sandbox=true`) in a dedicated `openWhisperMac/Info-Store.entitlements`, wired to the `Release-Store` config only (public DMG build stays non-sandboxed). Adds `network.client`, `device.audio-input`, `application-groups` (`$(TeamIdentifierPrefix)group.piszeprogramy.openWhisper`).
+- [x] `RecoveryAudioStore` → shared container path (`AppGroup.containerURL`) + `isExcludedFromBackup`.
+- [x] `PermissionUpgradeGuard` → `tccutil` spawn gated behind `#if !APP_STORE` (external process launch is blocked by the sandbox).
+- [x] FluidAudio model cache: uses `FileManager.urls(for: .applicationSupportDirectory)` which resolves into the sandbox container automatically — no code change; the model re-downloads on first Store launch (~460 MB, verified acceptable).
+- [x] `PrivacyInfo.xcprivacy` for the macOS app: required-reason APIs (`UserDefaults` CA92.1, file timestamp 4F0F.1, disk space 3B52.1), `NSPrivacyTracking=false`, collected-data declarations (user content + usage analytics + device id, not linked).
+- [x] `PrivacyInfo.xcprivacy` added to the vendored `parakeet-coreml-swift` package (file timestamp 4F0F.1) and registered as a package resource.
+- [x] FluidAudio: no privacy manifest upstream, but uses no required-reason APIs (only `sysctlbyname` for CPU info) — covered by the app manifest; no action.
+- [x] `DeviceSessionID` removed (was a broken iCloud-KV-synced identifier sent to OpenRouter). OpenRouter clients no longer send `session_id`. Analytics identity now lives in Keychain `InstallID` (Stage 1).
+
+### Runtime verification still required (manual, on a real device after signing)
+- [ ] Sandboxed build: AX paste/insert (`TextInsertionService`), global hotkey monitor (`HotkeyManager`), `CGEvent` paste, `SMAppService.mainApp` login item, audio ducking — confirm none break under the sandbox.
+- [ ] App Group suite (`UserDefaults(suiteName:)`) works on macOS with the team-prefixed entitlement.
 
 ## Stage 3 — Privacy disclosure & copy
 
