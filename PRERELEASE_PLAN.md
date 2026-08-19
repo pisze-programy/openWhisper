@@ -44,6 +44,8 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 - [x] ~~DeviceCheck token vs. install-UUID only~~ → **install-UUID only** (decided; no paid-billing exposure since no LLM proxying).
 - [x] ~~Prompts client-side vs. server-side~~ → **client-side** (decided).
 
+> **Status: DONE — commit `401068d`.** Deploy the Worker (`server/README.md`) and update the `UsageAnalytics.endpoint` constant once the KV namespace exists. Note: macOS/iOS apps now read the key from Keychain; the shelved keyboard extension still reads the legacy App Group defaults.
+
 ## Stage 2 — Sandbox + privacy manifest (hard blockers)
 
 - [ ] Enable App Sandbox (`com.apple.security.app-sandbox=true`) in `Release-Store` entitlements + add `application-groups` (team-prefixed).
