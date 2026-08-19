@@ -70,6 +70,10 @@ dictation, speech to text, voice typing, transcription, parakeet, dictate, voice
 
 `https://github.com/pisze-programy/openWhisper`
 
+## Privacy Policy URL
+
+`https://pisze-programy.github.io/openwhisper/`
+
 ## Marketing URL (optional)
 
 `https://github.com/pisze-programy/openWhisper`
