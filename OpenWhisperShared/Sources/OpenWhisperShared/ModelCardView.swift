@@ -12,14 +12,19 @@ public struct ModelCardView: View {
                     Image(systemName: "waveform.badge.mic")
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                    Text("Parakeet TDT 0.6B v3")
-                        .font(.headline)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Parakeet TDT 0.6B v3")
+                            .font(.headline)
+                        Text("~480 MB · one-time download")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if let available = modelDownload.availableFreeSpaceGB,
                    modelDownload.status == .notDownloaded {
                     Text(modelDownload.isLowOnSpace
-                         ? String(format: "Low storage — only %.1f GB free.", available)
+                         ? String(format: "Low storage — only %.1f GB free, %.1f GB required.", available, ModelDownloadManager.minRequiredFreeSpaceGB)
                          : String(format: "Free space: %.1f GB available.", available))
                         .font(.caption)
                         .foregroundStyle(modelDownload.isLowOnSpace ? .orange : .secondary)
@@ -48,6 +53,11 @@ public struct ModelCardView: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
+                            if let eta = modelDownload.etaSeconds, eta.isFinite, eta > 0 {
+                                Text("~\(etaText(eta)) left")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .font(.callout)
                         Text("You can close this window — the download continues in the background.")
@@ -96,7 +106,17 @@ public struct ModelCardView: View {
     }
 
     private func progressText(for progress: Double) -> String {
-        let doneMB = Int((progress * 480).rounded())
-        return "\(doneMB) of ~480 MB"
+        let total = modelDownload.totalMB ?? ModelDownloadManager.modelSizeMB
+        let doneMB = Int((progress * total).rounded())
+        return "\(doneMB) of ~\(Int(total.rounded())) MB"
+    }
+
+    private func etaText(_ seconds: TimeInterval) -> String {
+        if seconds >= 60 {
+            let minutes = Int(seconds / 60)
+            let secs = Int(seconds.truncatingRemainder(dividingBy: 60))
+            return "\(minutes) min \(secs) s"
+        }
+        return "\(Int(seconds)) s"
     }
 }
