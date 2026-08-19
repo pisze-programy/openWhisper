@@ -29,7 +29,7 @@ struct OnboardingStylesView: View {
                     StyleInfoRow(style: .formal)
                     StyleInfoRow(style: .casual)
                     StyleInfoRow(style: .veryCasual)
-                    StyleInfoRow(style: .excited)
+                    StyleInfoRow(style: .brief)
                 }
             }
         }

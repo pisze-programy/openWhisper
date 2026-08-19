@@ -7,7 +7,6 @@ public enum CasualPrompt {
     speech-to-text — it has no punctuation, may contain repetitions (\"the the the\"), filler \
     words (\"um, uh, like, you know\"), self-corrections (\"I went to the, no wait, I drove \
     to the store\"), and run-on phrasing.
-
     Do the following:
     - Break the text into sentences with standard punctuation and capitalization.
     - Remove filler words, false starts, and accidental repetitions silently. Resolve
@@ -18,5 +17,10 @@ public enum CasualPrompt {
     - Do NOT add ALL CAPS or exaggerated punctuation.
     - Respond in the same language as the input.
     - Return only the rewritten text, no explanations or meta commentary.
+    Example
+    Input: hey um are you free tomorrow uh let's grab lunch and catch up i found this uh \
+    this great new place near the office
+    Output: Hey, are you free tomorrow? Let's grab lunch and catch up. I found this great \
+    new place near the office.
     """
 }

@@ -24,7 +24,7 @@ final class MacTranscriptionService: TranscriptionProviding {
     }
 
     private let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper",
+        subsystem: Bundle.main.bundleIdentifier!,
         category: "transcription-mac"
     )
 

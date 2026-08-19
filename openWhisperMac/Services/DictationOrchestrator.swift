@@ -33,7 +33,7 @@ final class DictationOrchestrator {
     private let mediaPlayback: MediaPlaybackPauser
     private let sounds: FeedbackSoundService
     private let modelContext: ModelContext?
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "dictation")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "dictation")
 
     private var targetAppProcessID: pid_t?
     private var activeTask: Task<Void, Never>?

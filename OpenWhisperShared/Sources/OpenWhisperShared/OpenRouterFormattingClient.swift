@@ -147,7 +147,7 @@ public struct OpenRouterFormattingClient: Sendable {
         case .formal: return 0.2
         case .casual: return 0.3
         case .veryCasual: return 0.4
-        case .excited: return 0.4
+        case .brief: return 0.4
         }
     }
 

@@ -8,7 +8,7 @@ public enum TranscriptionStyle: String, CaseIterable, Identifiable, Sendable {
     case formal
     case casual
     case veryCasual
-    case excited
+    case brief
 
     public var id: String { rawValue }
 
@@ -18,7 +18,7 @@ public enum TranscriptionStyle: String, CaseIterable, Identifiable, Sendable {
         case .formal: return "Formal"
         case .casual: return "Casual"
         case .veryCasual: return "Minimal"
-        case .excited: return "Brief"
+        case .brief: return "Brief"
         }
     }
 
@@ -28,7 +28,7 @@ public enum TranscriptionStyle: String, CaseIterable, Identifiable, Sendable {
         case .formal: return "textformat"
         case .casual: return "bubble.left"
         case .veryCasual: return "scissors"
-        case .excited: return "list.bullet"
+        case .brief: return "list.bullet"
         }
     }
 }

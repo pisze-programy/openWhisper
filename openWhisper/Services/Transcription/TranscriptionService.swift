@@ -13,7 +13,7 @@ final class TranscriptionService {
     private let settings: SettingsStore
     private let modelDownload: ModelDownloadManager
     private let engine: TranscriptionEngine
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "transcription")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "transcription")
 
     init(settings: SettingsStore, modelDownload: ModelDownloadManager) {
         self.settings = settings

@@ -13,7 +13,7 @@ import os
 final class TextInsertionService {
     static let shared = TextInsertionService()
 
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper", category: "insertion")
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "insertion")
 
     /// Terminal + Firefox apps handle synthetic paste best; AX value writes are
     /// unreliable there.

@@ -10,7 +10,7 @@ public enum FormattingPrompts {
         case .formal: return FormalPrompt.instruction
         case .casual: return CasualPrompt.instruction
         case .veryCasual: return VeryCasualPrompt.instruction
-        case .excited: return ExcitedPrompt.instruction
+        case .brief: return BriefPrompt.instruction
         }
     }
 }
