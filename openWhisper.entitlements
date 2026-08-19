@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.piszeprogramy.openWhisper</string>
+		<string>group.pl.piszeprogramy.openwhisper</string>
 	</array>
 </dict>
 </plist>

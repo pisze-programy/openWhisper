@@ -180,7 +180,7 @@ Owner: **Agent builder-macos-app-shell**
   monitor. Status-only pill (Listening / Warming up / Transcribing / Polishing /
   Copied / error), gray/white per DESIGN.md; bubble in/out animation per DESIGN.md.
 - **Entitlements** (`openWhisperMac.entitlements`): app-sandbox, application-groups
-  (`group.piszeprogramy.openWhisper`), network.client, accessibility (automation).
+  (`group.pl.piszeprogramy.openWhisper`), network.client, accessibility (automation).
 - **Info.plist**: `NSMicrophoneUsageDescription`, `NSAccessibilityUsageDescription`,
   LSUIElement = true.
 - **Auto-login**: `SMAppService.mainApp.register()` on first launch; Settings toggle.

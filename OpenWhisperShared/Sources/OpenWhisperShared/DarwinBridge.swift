@@ -4,21 +4,21 @@ public enum DarwinBridge {
 
     public enum Signal: String, CaseIterable {
 
-        case ping = "piszeprogramy.openWhisper.ping"
+        case ping = "pl.piszeprogramy.openWhisper.ping"
 
-        case pong = "piszeprogramy.openWhisper.pong"
+        case pong = "pl.piszeprogramy.openWhisper.pong"
 
-        case startRecording = "piszeprogramy.openWhisper.rec.start"
+        case startRecording = "pl.piszeprogramy.openWhisper.rec.start"
 
-        case stopRecording = "piszeprogramy.openWhisper.rec.stop"
+        case stopRecording = "pl.piszeprogramy.openWhisper.rec.stop"
 
-        case cancelRecording = "piszeprogramy.openWhisper.rec.cancel"
+        case cancelRecording = "pl.piszeprogramy.openWhisper.rec.cancel"
 
-        case resultReady = "piszeprogramy.openWhisper.result"
+        case resultReady = "pl.piszeprogramy.openWhisper.result"
 
-        case stateChanged = "piszeprogramy.openWhisper.state"
+        case stateChanged = "pl.piszeprogramy.openWhisper.state"
 
-        case keepWarm = "piszeprogramy.openWhisper.keepwarm"
+        case keepWarm = "pl.piszeprogramy.openWhisper.keepwarm"
     }
 
     private static var center: CFNotificationCenter {

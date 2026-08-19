@@ -10,7 +10,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(TeamIdentifierPrefix)group.piszeprogramy.openWhisper</string>
+		<string>$(TeamIdentifierPrefix)group.pl.piszeprogramy.openwhisper</string>
 	</array>
 </dict>
 </plist>

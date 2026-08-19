@@ -3,7 +3,7 @@
 _Last updated: August 19, 2026_
 
 Answers for the App Store Connect **App Privacy** questionnaire for
-`piszeprogramy.openWhisper.mac`. These must match the bundled
+`pl.piszeprogramy.openWhisper.mac`. These must match the bundled
 `PrivacyInfo.xcprivacy`.
 
 ## Data Not Collected

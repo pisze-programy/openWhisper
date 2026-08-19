@@ -3,7 +3,7 @@
 _Last updated: August 19, 2026_
 
 Answers for the App Store Connect **Export Compliance** questionnaire for
-`piszeprogramy.openWhisper.mac`.
+`pl.piszeprogramy.openWhisper.mac`.
 
 ## Answer
 

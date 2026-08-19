@@ -11,7 +11,7 @@ import Security
 /// pops a Keychain prompt — caching collapses N prompts into one. `set` and
 /// `delete` invalidate the cache for that account.
 public enum KeychainStore {
-    private static let service = Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper"
+    private static let service = Bundle.main.bundleIdentifier ?? "pl.piszeprogramy.openWhisper"
 
     /// In-memory value cache keyed by account. Populated lazily on the first
     /// read, invalidated on every write/delete.

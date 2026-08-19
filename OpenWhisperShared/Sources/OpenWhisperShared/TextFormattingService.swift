@@ -10,7 +10,7 @@ public final class TextFormattingService {
     public private(set) var isFormatting = false
 
     private let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "piszeprogramy.openWhisper",
+        subsystem: Bundle.main.bundleIdentifier ?? "pl.piszeprogramy.openWhisper",
         category: "formatting"
     )
 

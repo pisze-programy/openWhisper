@@ -31,7 +31,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6A7B8C9D0E1F203040506070 /* openWhisperMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = openWhisperMac.app; path = OpenWhisper.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6A7B8C9D0E1F203040506070 /* OpenWhisper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenWhisper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenWhisperWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7865A1A1301F54170036B816 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7865A1A3301F54170036B816 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -152,7 +152,7 @@
 				78732CF1301C64E90019D594 /* openWhisper.app */,
 				E1F203140518293A4B5C6D7E /* OpenWhisperKeyboard.appex */,
 				7865A19F301F54170036B816 /* OpenWhisperWidgetExtension.appex */,
-				6A7B8C9D0E1F203040506070 /* openWhisperMac.app */,
+				6A7B8C9D0E1F203040506070 /* OpenWhisper.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -229,7 +229,7 @@
 				5F6A7B8C9D0E1F20293A4B5C /* FluidAudio */,
 			);
 			productName = openWhisperMac;
-			productReference = 6A7B8C9D0E1F203040506070 /* openWhisperMac.app */;
+			productReference = 6A7B8C9D0E1F203040506070 /* OpenWhisper.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A3B4C5D6E7F8091A2B3C4D5E /* OpenWhisperKeyboard */ = {
@@ -379,7 +379,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -409,7 +409,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -428,6 +428,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = openWhisperMac/Info.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
@@ -441,8 +443,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.mac;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.mac;
 				PRODUCT_NAME = OpenWhisper;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -456,6 +459,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = openWhisperMac/Info.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
@@ -468,8 +473,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.mac;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.mac;
 				PRODUCT_NAME = OpenWhisper;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -482,7 +488,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = openWhisperMac/Info-Store.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "openWhisperMac/Info-Store.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 3UKH2QRFKZ;
@@ -495,8 +503,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.mac;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.mac;
 				PRODUCT_NAME = OpenWhisper;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = APP_STORE;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -525,7 +534,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.OpenWhisperWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.OpenWhisperWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -560,7 +569,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.OpenWhisperWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.OpenWhisperWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -595,7 +604,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.OpenWhisperWidget;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.OpenWhisperWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -756,7 +765,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -796,7 +805,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -836,7 +845,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -926,7 +935,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.5;
-				PRODUCT_BUNDLE_IDENTIFIER = piszeprogramy.openWhisper.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = pl.piszeprogramy.openWhisper.keyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

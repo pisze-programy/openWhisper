@@ -141,7 +141,7 @@
 
 ### A.3 Unified log (os.Logger) — where the keyboard now writes
 
-The keyboard logs via `os.Logger` (`subsystem: piszeprogramy.openwhisper.keyboard`, `category: keyboard`).
+The keyboard logs via `os.Logger` (`subsystem: pl.piszeprogramy.openwhisper.keyboard`, `category: keyboard`).
 
 > **Important:** the macOS `log` CLI reads only the **Mac's own** logs — it has **no `--device` option**. For a physical iPhone use **Console.app** (GUI) or **sysdiagnose** (CLI) below. The `log` CLI does work for the **simulator**.
 > Device names can contain shell-special characters (commas, slashes, `!`, parentheses, spaces) — when a CLI needs a device identifier, use the **UDID** (safe, e.g. `00008120-000C71C03C03C01E`), found in Xcode → Window → Devices and Simulators.
@@ -151,7 +151,7 @@ The keyboard logs via `os.Logger` (`subsystem: piszeprogramy.openwhisper.keyboar
 2. Open **Console.app** (in `/Applications/Utilities`).
 3. Select the **iPhone** in the left sidebar.
 4. In the menu: **Action → Include Info Messages** and **Action → Include Debug Messages** (otherwise `os.Logger` info/debug lines are hidden).
-5. Search for `OpenWhisperKeyboard` or the subsystem `piszeprogramy.openwhisper.keyboard`. Stream live while you reproduce.
+5. Search for `OpenWhisperKeyboard` or the subsystem `pl.piszeprogramy.openwhisper.keyboard`. Stream live while you reproduce.
 6. To keep a copy: select the lines → **File → Export** (or **Save a Copy As…**).
 
 **Option 2 — Crash reports (the decisive source for a launch-time crash):**

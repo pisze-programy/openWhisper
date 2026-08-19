@@ -3,7 +3,7 @@
 _Last updated: August 19, 2026_
 
 Copy-paste-ready values for the App Store Connect app record
-(`piszeprogramy.openWhisper.mac`). Keep all text in **English** (global app).
+(`pl.piszeprogramy.openWhisper.mac`). Keep all text in **English** (global app).
 
 ## Name
 
