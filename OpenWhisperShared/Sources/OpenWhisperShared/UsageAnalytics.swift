@@ -49,7 +49,7 @@ public enum UsageAnalytics {
     /// The analytics endpoint. Point this at the deployed Worker (see
     /// `server/README.md`). Kept as a constant so the binary contains no
     /// configurable secrets.
-    public static var endpoint = URL(string: "https://openwhisper-usage.pisze-programy.workers.dev/v1/track")!
+    public static var endpoint = URL(string: "https://openwhisper-usage.dev-4cb.workers.dev/v1/track")!
 
     /// Whether the user opted into anonymous usage analytics (Settings toggle).
     public static var isEnabled: Bool {

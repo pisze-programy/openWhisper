@@ -2,12 +2,11 @@ name = "openwhisper-usage"
 main = "src/index.ts"
 compatibility_date = "2024-09-25"
 
-# Usage analytics counters. Create the namespace first, then paste the id:
-#   wrangler kv namespace create USAGE_KV
+# Usage analytics counters.
 [[kv_namespaces]]
 binding = "USAGE_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_NAMESPACE_PREVIEW_ID"
+id = "925fa5c424a54474b4f2d68540698e3a"
+preview_id = "925fa5c424a54474b4f2d68540698e3a"
 
 # Daily cleanup of expired aggregates (03:00 UTC).
 [triggers]
