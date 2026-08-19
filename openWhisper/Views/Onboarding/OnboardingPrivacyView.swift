@@ -24,7 +24,7 @@ struct OnboardingPrivacyView: View {
 
             GlassCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    PrivacyRow(icon: "internaldrive", text: "100% on-device — audio never leaves your phone")
+                    PrivacyRow(icon: "internaldrive", text: "Your audio is processed on your device and never leaves it")
                     PrivacyRow(icon: "person.crop.circle.badge.questionmark", text: "No account, no sign-up")
                     PrivacyRow(icon: "hand.raised.fill", text: "Your words are never used for training")
                 }

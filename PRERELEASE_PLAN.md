@@ -63,11 +63,12 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 
 ## Stage 3 — Privacy disclosure & copy
 
-- [ ] Update `NSMicrophoneUsageDescription`: audio stays on device; transcript text may go to the cloud for optional formatting/translation (off by default).
-- [ ] Update macOS onboarding/setup copy to match the actual data flow.
-- [ ] Fill `NSHumanReadableCopyright`.
-- [ ] Draft privacy policy (URL): transcript text → Worker/OpenRouter, per-device usage analytics, no accounts, how to delete data.
-- [ ] Draft App Review notes: Accessibility insert-only, global hotkey (no keylogging), menu-bar `LSUIElement` app, runtime model download (~460 MB), sandbox.
+- [x] Update `NSMicrophoneUsageDescription` (macOS `Info.plist` + iOS pbxproj ×3): audio stays on device by default; transcript text goes to OpenRouter provider only when formatting/translation is turned on (opt-in).
+- [x] Update macOS setup copy (`SetupWindow.swift`): "audio stays on your device; optional AI formatting/translation sends transcript text to OpenRouter".
+- [x] Update iOS onboarding privacy copy (`OnboardingPrivacyView.swift`).
+- [x] Fill `NSHumanReadableCopyright` ("© 2026 pisze-programy. OpenWhisper is open source (Apache-2.0).").
+- [x] Draft privacy policy (EN only — global app): `docs/privacy-policy.md` — local data, BYOK → OpenRouter, opt-in analytics counters, no accounts, deletion, third parties.
+- [x] Draft App Review notes: `docs/app-review-notes.md` — AX insert-only, hotkey no-keylogging, menu-bar LSUIElement, on-device STT + model download, opt-in formatting/translation, opt-in analytics, sandbox, SMAppService login item.
 
 ## Stage 4 — App Store Connect (human + prep)
 

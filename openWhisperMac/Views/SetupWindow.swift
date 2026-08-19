@@ -115,7 +115,7 @@ struct SetupWindow: View {
 
             ModelCardView()
 
-            Text("Audio never leaves your device.")
+            Text("Your audio stays on your device. Optional AI formatting and translation send the transcript text to the OpenRouter provider.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .padding(.leading, 4)

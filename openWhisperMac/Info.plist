@@ -25,9 +25,9 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string></string>
+	<string>© 2026 pisze-programy. OpenWhisper is open source (Apache-2.0).</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>OpenWhisper uses the microphone to transcribe your speech into text. Audio is processed on your device and never leaves it.</string>
+	<string>OpenWhisper uses the microphone to turn your speech into text. By default everything stays on your device. If you turn on AI formatting or translation, your transcript text is sent to the OpenRouter provider — only when you choose to.</string>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>OpenWhisper uses Accessibility to insert transcribed text into other applications.</string>
 </dict>
