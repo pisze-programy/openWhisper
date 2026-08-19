@@ -124,4 +124,10 @@ final class AnalyticsPayloadTests: XCTestCase {
         XCTAssertEqual(UsageAnalytics.Feature.formatAndTranslate.rawValue, "formatAndTranslate")
         XCTAssertEqual(UsageAnalytics.Feature.translateOnly.rawValue, "translateOnly")
     }
+
+    func testAnalyticsDefaultsToOff() {
+        UserDefaults.standard.removeObject(forKey: AppGroup.usageAnalyticsEnabledKey)
+        UserDefaults(suiteName: AppGroup.identifier)?.removeObject(forKey: AppGroup.usageAnalyticsEnabledKey)
+        XCTAssertFalse(UsageAnalytics.isEnabled)
+    }
 }

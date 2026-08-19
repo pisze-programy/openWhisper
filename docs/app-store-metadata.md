@@ -50,14 +50,13 @@ OpenWhisper is open source (Apache-2.0).
 
 ## Keywords
 
-Comma-separated, 100 chars max. Draft (trim if over):
+Comma-separated, 100 chars max. Final (trimmed to fit):
 
 ```
-dictation, speech to text, voice typing, transcription, whisper, parakeet, dictate, voice, ai, translate
+dictation, speech to text, voice typing, transcription, parakeet, dictate, voice, ai, translate
 ```
 
-> Check length: App Store allows up to 100 characters. Current draft ≈ 105 —
-> remove one entry before pasting (suggest dropping "whisper").
+> Length: 99 chars — fits the 100-char limit.
 
 ## What's New (version 1.5)
 

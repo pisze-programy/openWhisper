@@ -15,10 +15,12 @@ API key. Anonymous, opt-in usage analytics report counters only.
 ## Accessibility API (inserting text)
 The app uses the macOS Accessibility API **only to insert transcribed text** into
 the frontmost app's focused text field, and to verify that the insert landed.
-It reads only the focused input's value/selection for that verification. It does
-not read other content, enumerate windows, capture the screen, or log keystrokes.
-The user grants Accessibility explicitly in onboarding; without it the app falls
-back to copying to the clipboard.
+It reads the focused input's value/selection (and its text-bearing ancestors
+while locating the editable field) for that verification. It does not read other
+content, enumerate windows, capture the screen, or log keystrokes.
+The user grants Accessibility explicitly in onboarding; without it the app does
+not attempt insertion and the transcript stays on the clipboard (Auto-Copy, on
+by default).
 
 ## Global hotkey
 The app installs a global event monitor to detect the dictation hotkey (right
@@ -33,7 +35,7 @@ the menu bar icon.
 
 ## On-device transcription
 Speech-to-text uses the Parakeet TDT model (via the FluidAudio engine) running
-locally on Apple Silicon. The model (~460 MB) is downloaded from Hugging Face on
+locally on Apple Silicon. The model (~480 MB) is downloaded from Hugging Face on
 first use, then runs offline. No microphone audio ever leaves the device.
 
 ## AI formatting and translation (opt-in)

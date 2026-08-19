@@ -61,6 +61,6 @@ Answers for the App Store Connect **App Privacy** questionnaire for
 - The privacy label matches the app's `PrivacyInfo.xcprivacy`
   (`openWhisperMac/PrivacyInfo.xcprivacy`): `NSPrivacyTracking=false`, and the
   three declared collected-data types above, all not-linked.
-- The analytics toggle ("Share anonymous usage stats") defaults to ON and can
-  be disabled in Settings; the worker receives only counters (see
-  `docs/privacy-policy.md`).
+- The analytics toggle ("Share anonymous usage stats") defaults to OFF (true
+  opt-in) and can be enabled in Settings; the worker receives only counters
+  (see `docs/privacy-policy.md`).

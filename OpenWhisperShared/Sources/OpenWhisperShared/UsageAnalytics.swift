@@ -52,9 +52,11 @@ public enum UsageAnalytics {
     public static var endpoint = URL(string: "https://openwhisper-usage.dev-4cb.workers.dev/v1/track")!
 
     /// Whether the user opted into anonymous usage analytics (Settings toggle).
+    /// Default off — the app is privacy-first and never reports without an
+    /// explicit choice.
     public static var isEnabled: Bool {
         UserDefaults.standard.object(forKey: AppGroup.usageAnalyticsEnabledKey) as? Bool
-            ?? true
+            ?? false
     }
 
     /// Fire-and-forget telemetry request. Errors are dropped deliberately —

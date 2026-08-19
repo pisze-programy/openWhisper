@@ -47,13 +47,14 @@ policy and terms for how they handle the text you send them.
 If you leave the "Share anonymous usage stats" setting enabled, the app reports
 basic usage counters to our analytics service (a Cloudflare Worker). These
 counters include things like the feature used (formatting vs. translation), the
-language, whether the request succeeded, and response latency. They are tied to
-a random, per-install identifier that cannot be traced back to you. **No audio
-and no transcript text is ever included.** You can disable this at any time in
+formatting style, the language, whether the request succeeded, response
+latency, and the character count of the text. They are tied to a random,
+per-install identifier that cannot be traced back to you. **No audio and no
+transcript text is ever included.** You can disable this at any time in
 Settings; disabling it stops all reporting immediately.
 
 ### 5. Speech model download
-On first use the app downloads a speech model (~460 MB) from Hugging Face so
+On first use the app downloads a speech model (~480 MB) from Hugging Face so
 that transcription can run on your device. This is a one-time download.
 
 ## Storage and security
