@@ -67,7 +67,7 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 - [x] Update macOS setup copy (`SetupWindow.swift`): "audio stays on your device; optional AI formatting/translation sends transcript text to OpenRouter".
 - [x] Update iOS onboarding privacy copy (`OnboardingPrivacyView.swift`).
 - [x] Fill `NSHumanReadableCopyright` ("© 2026 pisze-programy. OpenWhisper is open source (Apache-2.0).").
-- [x] Draft privacy policy (EN only — global app): `docs/privacy-policy.md` — local data, BYOK → OpenRouter, opt-in analytics counters, no accounts, deletion, third parties.
+- [x] Privacy policy hosted live on GitHub Pages: `https://pisze-programy.github.io/openwhisper/` (auto-deploy from `docs/`).
 - [x] Draft App Review notes: `docs/app-review-notes.md` — AX insert-only, hotkey no-keylogging, menu-bar LSUIElement, on-device STT + model download, opt-in formatting/translation, opt-in analytics, sandbox, SMAppService login item.
 
 ## Stage 4 — App Store Connect (human + prep)
