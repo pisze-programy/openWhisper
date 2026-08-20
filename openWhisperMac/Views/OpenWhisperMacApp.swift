@@ -17,6 +17,12 @@ struct OpenWhisperMacApp: App {
     @State private var container: ModelContainer?
 
     init() {
+        // Must run before ModelContainer is created: the history store lives in
+        // the App Group container, so any legacy store has to be moved first or
+        // SwiftData would open (create) the target and the copy would conflict.
+        AppDelegate.migrateHistoryIfNeeded()
+        SettingsStore.migrateFromLegacyDefaultsIfNeeded()
+
         try? FileManager.default.createDirectory(
             at: ModelLocations.historyStoreURL.deletingLastPathComponent(),
             withIntermediateDirectories: true

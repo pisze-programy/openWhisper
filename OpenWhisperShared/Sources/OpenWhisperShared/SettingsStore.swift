@@ -28,11 +28,15 @@ public final class SettingsStore {
     public static let shared = SettingsStore()
 
     /// Primary settings store. Uses the App Group suite (team-scoped, stable
-    /// across app updates and bundle-id changes) instead of `Self.suite`
+    /// across app updates and bundle-id changes) instead of `UserDefaults.standard`
     /// (sandbox-container-scoped) so settings and the onboarding flag survive an
     /// update. Falls back to standard defaults only if the suite is unavailable.
     public static var suite: UserDefaults {
+        #if os(macOS)
+        UserDefaults(suiteName: AppGroup.macContainerIdentifier) ?? .standard
+        #else
         UserDefaults(suiteName: AppGroup.identifier) ?? .standard
+        #endif
     }
 
     /// One-time migration: copies legacy `settings.*` keys from the old

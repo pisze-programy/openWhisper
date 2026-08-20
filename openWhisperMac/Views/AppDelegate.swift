@@ -150,18 +150,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Support, keyed by the previous bundle identifier) into the stable App
     /// Group locations. Every step is best-effort and leaves the source in
     /// place, so the old files act as a backup and nothing is ever overwritten.
-    private static func migrateLegacyData(settings: SettingsStore) {
+    static func migrateLegacyData(settings: SettingsStore) {
         // 1. Settings + onboarding flag: standard defaults → App Group suite.
         SettingsStore.migrateFromLegacyDefaultsIfNeeded()
 
         // 2. OpenRouter key: KeychainStore already migrates legacy services on
         //    first read (see KeychainStore.migrateLegacy).
 
-        // 3. History database: copy the old store into the App Group container.
-        migrateHistoryIfNeeded()
+        // History migration happens in OpenWhisperMacApp.init() — before
+        // ModelContainer is created — so it cannot conflict with the open store.
     }
 
-    private static func migrateHistoryIfNeeded() {
+    /// Copies the legacy history store into the App Group container. MUST run
+    /// before `ModelContainer` is created (i.e. before the SwiftUI App init
+    /// returns) — otherwise SwiftData opens the target store first and the copy
+    /// would conflict with an already-open database.
+    static func migrateHistoryIfNeeded() {
         let legacy = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("OpenWhisper", isDirectory: true)
         let target = ModelLocations.historyStoreURL
