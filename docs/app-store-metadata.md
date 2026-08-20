@@ -58,12 +58,15 @@ dictation, speech to text, voice typing, transcription, parakeet, dictate, voice
 
 > Length: 99 chars — fits the 100-char limit.
 
-## What's New (version 1.5)
+## What's New (version 1.7)
 
 ```
-• Model download now shows size and a live time estimate
-• AI formatting and translation use your own OpenRouter API key, stored securely in the Keychain
-• Privacy disclosure updates
+• Settings, history and your API key now survive app updates — nothing resets
+• Onboarding is shown only once; dictation works right after an update
+• Accessibility status updates live, with a hint when a restart is needed
+• Dictating without a model now shows a clear "No model yet" message instead
+  of a silent download
+• Your OpenRouter API key is stored in the Keychain
 ```
 
 ## Support URL

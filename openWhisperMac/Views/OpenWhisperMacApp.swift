@@ -9,7 +9,6 @@ struct OpenWhisperMacApp: App {
     @Environment(\.openWindow) private var openWindow
 
     @State private var settings = SettingsStore.shared
-    @State private var modelDownload = ModelDownloadManager.shared
     @State private var toast = ToastCenter()
     @State private var corrections = CorrectionsStore.shared
     @State private var clipboard = MacClipboardService.shared
@@ -57,7 +56,6 @@ struct OpenWhisperMacApp: App {
         Window("OpenWhisper", id: "openwhisper") {
             MacRootView()
                 .environment(settings)
-                .environment(modelDownload)
                 .environment(MacTranscriptionService.shared)
                 .environment(toast)
                 .environment(corrections)
@@ -72,7 +70,6 @@ struct OpenWhisperMacApp: App {
         Window("OpenWhisper Setup", id: "setup") {
             SetupWindow()
                 .environment(settings)
-                .environment(modelDownload)
                 .environment(MacTranscriptionService.shared)
                 .environment(PermissionManager.shared)
         }

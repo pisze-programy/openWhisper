@@ -190,6 +190,7 @@ Details and decisions: [PLAN.md](PLAN.md) · [PLAN_MACOS.md](PLAN_MACOS.md).
 
 ## Release notes
 
+- **v1.7** — Settings, history and your API key now survive app updates; onboarding shows only once. Accessibility status updates live. Dictating without a model shows a clear "No model yet" message. API key stored in the Keychain.
 - **v1.4** — Media handling while dictating: pause playback (Music/Spotify/YouTube) and resume where it stopped on the public build; the App Store build mutes the output instead. Toggle in Settings → Dictation.
 
 ---

@@ -13,7 +13,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let recorder = MacRecorder()
     private let transcription = MacTranscriptionService.shared
-    private let modelDownload = ModelDownloadManager.shared
     private var sleepObserver: SystemSleepObserver?
 
     func applicationDidFinishLaunching(_ notification: Notification) {

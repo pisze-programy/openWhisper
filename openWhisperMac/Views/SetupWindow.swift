@@ -5,7 +5,6 @@ import OpenWhisperShared
 /// download, then finish.
 struct SetupWindow: View {
     @Environment(SettingsStore.self) private var settings
-    @Environment(ModelDownloadManager.self) private var modelDownload
     @Environment(PermissionManager.self) private var permissionManager
 
     private enum Step: Int, CaseIterable {
