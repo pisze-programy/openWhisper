@@ -10,7 +10,7 @@ napraw w kolejności od blokujących do kosmetycznych.
 **Objawy:**
 - "openWhisperMac would like to access data from other apps" (automation.apple-events)
 - Aplikacja nie pojawia się na liście Accessibility w Privacy
-- FluidAudio nie znajduje modelu: `Models not found in cache at .../Containers/pl.piszeprogramy.openWhisper.mac/...`
+- FluidAudio nie znajduje modelu: `Models not found in cache at .../Containers/pl.piszeprogramy.openwhisper.macos/...`
   → sandbox daje osobny kontener, nie widać globalnego `~/Library/Application Support/FluidAudio/`
 - `CFPrefsPlistSource` warnings (sandbox + App Group)
 

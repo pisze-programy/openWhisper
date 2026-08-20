@@ -48,7 +48,7 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 
 ## Stage 2 — Sandbox + privacy manifest (hard blockers)
 
-- [x] Enable App Sandbox (`com.apple.security.app-sandbox=true`) in a dedicated `openWhisperMac/Info-Store.entitlements`, wired to the `Release-Store` config only (public DMG build stays non-sandboxed). Adds `network.client`, `device.audio-input`, `application-groups` (`$(TeamIdentifierPrefix)group.pl.piszeprogramy.openWhisper`).
+- [x] Enable App Sandbox (`com.apple.security.app-sandbox=true`) in a dedicated `openWhisperMac/Info-Store.entitlements`, wired to the `Release-Store` config only (public DMG build stays non-sandboxed). Adds `network.client`, `device.audio-input`, `application-groups` (`$(TeamIdentifierPrefix)group.pl.piszeprogramy.openwhisper`).
 - [x] `RecoveryAudioStore` → shared container path (`AppGroup.containerURL`) + `isExcludedFromBackup`.
 - [x] `PermissionUpgradeGuard` → `tccutil` spawn gated behind `#if !APP_STORE` (external process launch is blocked by the sandbox).
 - [x] FluidAudio model cache: uses `FileManager.urls(for: .applicationSupportDirectory)` which resolves into the sandbox container automatically — no code change; the model re-downloads on first Store launch (~460 MB, verified acceptable).
@@ -78,7 +78,7 @@ Status: **draft — decisions per stage are made as we go (add / keep / skip).**
 - [x] App name "OpenWhisper" availability check — no exact match on iOS/macOS; OpenAI "Whisper" etc. exist but are distinct (M7).
 - [x] Final secret scan — 0 matches (M8 adjacent).
 - [ ] ~~Screenshots~~ — blocked on Screen Recording TCC in terminal; take manually on the final signed build (macOS 26, 6.5"/8"/13" sizes).
-- [ ] App record for `pl.piszeprogramy.openWhisper.mac` (needs account).
+- [ ] App record for `pl.piszeprogramy.openwhisper.macos` (needs account).
 - [ ] Description, promo text, keywords — paste from `docs/app-store-metadata.md`.
 - [ ] App Privacy label — answer per `docs/app-store-privacy-label.md`.
 - [ ] Export compliance — answer per `docs/export-compliance.md`.

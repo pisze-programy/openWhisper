@@ -1,7 +1,7 @@
 import Foundation
 
 public enum AppGroup {
-    public static let identifier = "group.pl.piszeprogramy.openWhisper"
+    public static let identifier = "group.pl.piszeprogramy.openwhisper"
 
     public static let cloudApiKeyKey = "settings.cloudApiKey"
     public static let languageCodeKey = "settings.languageCode"
