@@ -20,10 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Self.current = self
         PermissionUpgradeGuard.resetAccessibilityIfUpgraded()
         PermissionManager.shared.refresh()
-        ModelDownloadManager.shared.refreshStatus()
 
         let settings = SettingsStore.shared
-        settings.resetCloudFeaturesIfNoKey()
+        // One-time move of legacy data (history + model + settings + key) into
+        // the stable App Group locations so an update never resets the user.
+        Self.migrateLegacyData(settings: settings)
         let pipeline = PostProcessingPipeline()
         let corrections = CorrectionsStore.shared
 
@@ -120,14 +121,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         HotkeyManager.shared.start()
 
-        if !settings.onboardingCompleted {
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
-        } else {
-            Task {
-                await transcription.warmUp()
-                await recorder.prewarm()
-            }
+        // Model warm-up is independent of onboarding: load from cache if the
+        // model is already on disk (returning user → STT works immediately),
+        // never auto-download. The model card exposes the explicit download.
+        Task {
+            await transcription.migrateLegacyModelIfNeeded()
+            await transcription.warmUpFromCache()
+            await recorder.prewarm()
         }
 
         DispatchQueue.main.async { [weak self] in
@@ -142,5 +142,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sleepObserver?.stop()
         orchestrator?.cancel()
         AudioDuckingService.shared.restore()
+    }
+
+    // MARK: - Legacy data migration
+
+    /// Copies data created by older builds (sandbox-container Application
+    /// Support, keyed by the previous bundle identifier) into the stable App
+    /// Group locations. Every step is best-effort and leaves the source in
+    /// place, so the old files act as a backup and nothing is ever overwritten.
+    private static func migrateLegacyData(settings: SettingsStore) {
+        // 1. Settings + onboarding flag: standard defaults → App Group suite.
+        SettingsStore.migrateFromLegacyDefaultsIfNeeded()
+
+        // 2. OpenRouter key: KeychainStore already migrates legacy services on
+        //    first read (see KeychainStore.migrateLegacy).
+
+        // 3. History database: copy the old store into the App Group container.
+        migrateHistoryIfNeeded()
+    }
+
+    private static func migrateHistoryIfNeeded() {
+        let legacy = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("OpenWhisper", isDirectory: true)
+        let target = ModelLocations.historyStoreURL
+
+        let legacyStore = legacy.appendingPathComponent("History.store")
+        let targetStore = target.deletingLastPathComponent()
+            .appendingPathComponent("History.store")
+        guard FileManager.default.fileExists(atPath: legacyStore.path),
+              !FileManager.default.fileExists(atPath: targetStore.path) else { return }
+
+        try? FileManager.default.createDirectory(
+            at: targetStore.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        // Copy main store + sqlite sidecars so nothing is lost; the original is
+        // kept as the backup.
+        for name in ["History.store", "History.store-shm", "History.store-wal"] {
+            let src = legacy.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: src.path) else { continue }
+            try? FileManager.default.copyItem(at: src, to: targetStore.deletingLastPathComponent().appendingPathComponent(name))
+        }
     }
 }

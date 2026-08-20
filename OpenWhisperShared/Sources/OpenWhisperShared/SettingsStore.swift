@@ -27,16 +27,39 @@ public final class SettingsStore {
     /// dictation instead of living on a second, stale instance.
     public static let shared = SettingsStore()
 
+    /// Primary settings store. Uses the App Group suite (team-scoped, stable
+    /// across app updates and bundle-id changes) instead of `Self.suite`
+    /// (sandbox-container-scoped) so settings and the onboarding flag survive an
+    /// update. Falls back to standard defaults only if the suite is unavailable.
+    public static var suite: UserDefaults {
+        UserDefaults(suiteName: AppGroup.identifier) ?? .standard
+    }
+
+    /// One-time migration: copies legacy `settings.*` keys from the old
+    /// `Self.suite` store into the App Group suite, then marks the
+    /// migration done. Idempotent — never overwrites an existing suite value.
+    public static func migrateFromLegacyDefaultsIfNeeded() {
+        let marker = "settings.migratedToAppGroup"
+        guard suite.object(forKey: marker) == nil else { return }
+        let legacy = UserDefaults.standard
+        let keys = legacy.dictionaryRepresentation().keys.filter { $0.hasPrefix("settings.") }
+        for key in keys {
+            if suite.object(forKey: key) == nil {
+                suite.set(legacy.object(forKey: key), forKey: key)
+            }
+        }
+        suite.set(true, forKey: marker)
+    }
+
     public var computeUnits: ParakeetComputeUnits {
         didSet {
-            UserDefaults.standard.set(computeUnits.rawValue, forKey: "settings.computeUnits")
+            Self.suite.set(computeUnits.rawValue, forKey: "settings.computeUnits")
         }
     }
 
     public var autoCopy: Bool {
         didSet {
-            UserDefaults.standard.set(autoCopy, forKey: "settings.autoCopy")
-            UserDefaults(suiteName: AppGroup.identifier)?.set(autoCopy, forKey: "settings.autoCopy")
+            Self.suite.set(autoCopy, forKey: "settings.autoCopy")
         }
     }
 
@@ -44,7 +67,7 @@ public final class SettingsStore {
     /// Default off; requires Accessibility permission.
     public var autoPaste: Bool {
         didSet {
-            UserDefaults.standard.set(autoPaste, forKey: "settings.autoPaste")
+            Self.suite.set(autoPaste, forKey: "settings.autoPaste")
         }
     }
 
@@ -52,21 +75,19 @@ public final class SettingsStore {
     /// consistent with autoCopy leaving the transcript on the clipboard.
     public var preserveClipboard: Bool {
         didSet {
-            UserDefaults.standard.set(preserveClipboard, forKey: "settings.preserveClipboard")
+            Self.suite.set(preserveClipboard, forKey: "settings.preserveClipboard")
         }
     }
 
     public var saveToHistory: Bool {
         didSet {
-            UserDefaults.standard.set(saveToHistory, forKey: "settings.saveToHistory")
-            UserDefaults(suiteName: AppGroup.identifier)?.set(saveToHistory, forKey: "settings.saveToHistory")
+            Self.suite.set(saveToHistory, forKey: "settings.saveToHistory")
         }
     }
 
     public var languageCode: String? {
         didSet {
-            UserDefaults.standard.set(languageCode, forKey: AppGroup.languageCodeKey)
-            UserDefaults(suiteName: AppGroup.identifier)?.set(languageCode, forKey: AppGroup.languageCodeKey)
+            Self.suite.set(languageCode, forKey: AppGroup.languageCodeKey)
         }
     }
 
@@ -76,15 +97,13 @@ public final class SettingsStore {
     /// keyboard extension can honor it too.
     public var autoStopSilenceSeconds: Double {
         didSet {
-            UserDefaults.standard.set(autoStopSilenceSeconds, forKey: AppGroup.autoStopSilenceSecondsKey)
-            UserDefaults(suiteName: AppGroup.identifier)?.set(autoStopSilenceSeconds, forKey: AppGroup.autoStopSilenceSecondsKey)
+            Self.suite.set(autoStopSilenceSeconds, forKey: AppGroup.autoStopSilenceSecondsKey)
         }
     }
 
     public var autoStopOnSilence: Bool {
         didSet {
-            UserDefaults.standard.set(autoStopOnSilence, forKey: AppGroup.autoStopOnSilenceKey)
-            UserDefaults(suiteName: AppGroup.identifier)?.set(autoStopOnSilence, forKey: AppGroup.autoStopOnSilenceKey)
+            Self.suite.set(autoStopOnSilence, forKey: AppGroup.autoStopOnSilenceKey)
         }
     }
 
@@ -93,7 +112,7 @@ public final class SettingsStore {
     /// hear normal speech. Default 5.0 ("Optimal").
     public var micGain: Double {
         didSet {
-            UserDefaults.standard.set(micGain, forKey: "settings.micGain")
+            Self.suite.set(micGain, forKey: "settings.micGain")
         }
     }
 
@@ -102,7 +121,7 @@ public final class SettingsStore {
     /// the slider, adaptive boost on top when enabled.
     public var microphoneBoostEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(microphoneBoostEnabled, forKey: "settings.microphoneBoost")
+            Self.suite.set(microphoneBoostEnabled, forKey: "settings.microphoneBoost")
         }
     }
 
@@ -110,14 +129,14 @@ public final class SettingsStore {
     /// speech". Default on.
     public var transcribeShortQuietClipsAggressively: Bool {
         didSet {
-            UserDefaults.standard.set(transcribeShortQuietClipsAggressively, forKey: "settings.aggressiveShortClips")
+            Self.suite.set(transcribeShortQuietClipsAggressively, forKey: "settings.aggressiveShortClips")
         }
     }
 
     /// Require a second Esc press to confirm cancelling a recording (macOS).
     public var requireSecondEscapeToCancel: Bool {
         didSet {
-            UserDefaults.standard.set(requireSecondEscapeToCancel, forKey: "settings.requireSecondEscape")
+            Self.suite.set(requireSecondEscapeToCancel, forKey: "settings.requireSecondEscape")
         }
     }
 
@@ -126,7 +145,7 @@ public final class SettingsStore {
     /// untouched (and skip the output-volume duck).
     public var mediaHandlingEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(mediaHandlingEnabled, forKey: "settings.mediaHandlingEnabled")
+            Self.suite.set(mediaHandlingEnabled, forKey: "settings.mediaHandlingEnabled")
         }
     }
 
@@ -135,7 +154,7 @@ public final class SettingsStore {
     /// private framework and resumes it at the same position (public DMG only).
     public var mediaHandlingMode: MediaHandlingMode {
         didSet {
-            UserDefaults.standard.set(mediaHandlingMode.rawValue, forKey: "settings.mediaHandlingMode")
+            Self.suite.set(mediaHandlingMode.rawValue, forKey: "settings.mediaHandlingMode")
         }
     }
 
@@ -152,7 +171,7 @@ public final class SettingsStore {
     public var formattingStyle: TranscriptionStyle {
         didSet {
             guard !suppressFormattingStyleSave else { return }
-            UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
+            Self.suite.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
         }
     }
 
@@ -175,7 +194,7 @@ public final class SettingsStore {
     /// Persists the currently selected style. Called when the style-switch
     /// hotkey is released.
     public func persistFormattingStyle() {
-        UserDefaults.standard.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
+        Self.suite.set(formattingStyle.rawValue, forKey: "settings.formattingStyle")
     }
 
     /// Target language dictation output is translated into. `nil` = None — the
@@ -184,7 +203,7 @@ public final class SettingsStore {
     public var translationTargetCode: String? {
         didSet {
             guard !suppressTranslationTargetSave else { return }
-            UserDefaults.standard.set(translationTargetCode, forKey: "settings.translationTargetCode")
+            Self.suite.set(translationTargetCode, forKey: "settings.translationTargetCode")
         }
     }
 
@@ -193,7 +212,7 @@ public final class SettingsStore {
     /// languages leaves only NONE, i.e. no translation.
     public var translationTargets: [String] {
         didSet {
-            UserDefaults.standard.set(translationTargets, forKey: "settings.translationTargets")
+            Self.suite.set(translationTargets, forKey: "settings.translationTargets")
             if let target = translationTargetCode, !translationTargets.contains(target) {
                 translationTargetCode = nil
             }
@@ -225,19 +244,19 @@ public final class SettingsStore {
     /// Persists the currently selected translation target. Called when the
     /// translation-switch hotkey is released.
     public func persistTranslationTarget() {
-        UserDefaults.standard.set(translationTargetCode, forKey: "settings.translationTargetCode")
+        Self.suite.set(translationTargetCode, forKey: "settings.translationTargetCode")
     }
 
     public var onboardingCompleted: Bool {
         didSet {
-            UserDefaults.standard.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
+            Self.suite.set(onboardingCompleted, forKey: "settings.onboardingCompleted")
         }
     }
 
     /// Launch OpenWhisper automatically when the user logs in (macOS).
     public var launchAtLogin: Bool {
         didSet {
-            UserDefaults.standard.set(launchAtLogin, forKey: "settings.launchAtLogin")
+            Self.suite.set(launchAtLogin, forKey: "settings.launchAtLogin")
         }
     }
 
@@ -246,8 +265,7 @@ public final class SettingsStore {
     /// transcript text). Default off; can be turned on in Settings.
     public var usageAnalyticsEnabled: Bool {
         didSet {
-            UserDefaults.standard.set(usageAnalyticsEnabled, forKey: AppGroup.usageAnalyticsEnabledKey)
-            UserDefaults(suiteName: AppGroup.identifier)?.set(usageAnalyticsEnabled, forKey: AppGroup.usageAnalyticsEnabledKey)
+            Self.suite.set(usageAnalyticsEnabled, forKey: AppGroup.usageAnalyticsEnabledKey)
         }
     }
 
@@ -261,31 +279,32 @@ public final class SettingsStore {
         guard !OpenRouterApiKeyStore.hasValue else { return }
         if formattingStyle != .none {
             formattingStyle = .none
-            UserDefaults.standard.set(TranscriptionStyle.none.rawValue, forKey: "settings.formattingStyle")
+            Self.suite.set(TranscriptionStyle.none.rawValue, forKey: "settings.formattingStyle")
         }
         if translationTargetCode != nil {
             translationTargetCode = nil
-            UserDefaults.standard.set(nil, forKey: "settings.translationTargetCode")
+            Self.suite.set(nil, forKey: "settings.translationTargetCode")
         }
     }
 
     /// App-side read of the silence auto-stop toggle (default on).
     public static var silenceAutoStopEnabled: Bool {
-        UserDefaults.standard.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
+        Self.suite.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
     }
 
     /// App-side read of the silence timeout in seconds (default 5).
     public static var silenceAutoStopSeconds: Double {
-        UserDefaults.standard.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
+        Self.suite.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0
     }
 
     /// App-side read of the microphone gain (1...10, default 5 = "Optimal").
     public static var sharedMicGain: Double {
-        UserDefaults.standard.object(forKey: "settings.micGain") as? Double ?? 5.0
+        Self.suite.object(forKey: "settings.micGain") as? Double ?? 5.0
     }
 
     public init() {
-        let defaults = UserDefaults.standard
+        let defaults = Self.suite
+        Self.migrateFromLegacyDefaultsIfNeeded()
         if let raw = defaults.string(forKey: "settings.computeUnits"),
            let units = ParakeetComputeUnits(rawValue: raw) {
             // .ane and .all are supported by the engine but not offered in the
@@ -297,17 +316,14 @@ public final class SettingsStore {
         }
         let copy = defaults.object(forKey: "settings.autoCopy") as? Bool ?? true
         autoCopy = copy
-        UserDefaults(suiteName: AppGroup.identifier)?.set(copy, forKey: "settings.autoCopy")
         autoPaste = defaults.object(forKey: "settings.autoPaste") as? Bool ?? true
         preserveClipboard = defaults.object(forKey: "settings.preserveClipboard") as? Bool ?? false
         let history = defaults.object(forKey: "settings.saveToHistory") as? Bool ?? true
         saveToHistory = history
-        UserDefaults(suiteName: AppGroup.identifier)?.set(history, forKey: "settings.saveToHistory")
         let code = defaults.string(forKey: AppGroup.languageCodeKey)
         languageCode = code
         // Mirror the existing value into the shared App Group suite (didSet does
         // not fire during init) so the keyboard sees it without a re-pick.
-        UserDefaults(suiteName: AppGroup.identifier)?.set(code, forKey: AppGroup.languageCodeKey)
         onboardingCompleted = defaults.object(forKey: "settings.onboardingCompleted") as? Bool ?? false
         autoStopOnSilence = defaults.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true
         autoStopSilenceSeconds = defaults.object(forKey: AppGroup.autoStopSilenceSecondsKey) as? Double ?? 5.0

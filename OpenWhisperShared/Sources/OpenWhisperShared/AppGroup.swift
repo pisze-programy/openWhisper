@@ -10,13 +10,11 @@ public enum AppGroup {
     public static let usageAnalyticsEnabledKey = "settings.usageAnalyticsEnabled"
 
     public static var containerURL: URL {
-        #if os(macOS)
-        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("OpenWhisper", isDirectory: true)
-        #else
-        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier)
+        // App Group container is team-scoped and stable across app updates and
+        // bundle-id changes — unlike the sandbox container or plain
+        // Application Support, which reset when the bundle identifier changes.
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier)
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("OpenWhisper", isDirectory: true)
-        #endif
     }
 }

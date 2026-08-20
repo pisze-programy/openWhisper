@@ -184,9 +184,9 @@ final class TextProcessingTests: XCTestCase {
 
         settings.cycleTranslationTarget(preview: true)
         XCTAssertEqual(settings.translationTargetCode, "pl")
-        XCTAssertNil(UserDefaults.standard.string(forKey: "settings.translationTargetCode"))
+        XCTAssertNil(SettingsStore.suite.string(forKey: "settings.translationTargetCode"))
 
         settings.persistTranslationTarget()
-        XCTAssertEqual(UserDefaults.standard.string(forKey: "settings.translationTargetCode"), "pl")
+        XCTAssertEqual(SettingsStore.suite.string(forKey: "settings.translationTargetCode"), "pl")
     }
 }

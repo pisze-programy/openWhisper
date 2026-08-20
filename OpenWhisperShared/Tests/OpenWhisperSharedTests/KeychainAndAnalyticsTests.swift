@@ -4,7 +4,13 @@ import XCTest
 final class KeychainStoreTests: XCTestCase {
     private let account = "test.keychain.\(UUID().uuidString)"
 
+    override func setUp() {
+        super.setUp()
+        KeychainStore.serviceOverride = "test.openwhisper.\(UUID().uuidString)"
+    }
+
     override func tearDown() {
+        KeychainStore.serviceOverride = nil
         KeychainStore.delete(account: account)
         UserDefaults.standard.removeObject(forKey: AppGroup.cloudApiKeyKey)
         UserDefaults(suiteName: AppGroup.identifier)?.removeObject(forKey: AppGroup.cloudApiKeyKey)
@@ -41,12 +47,18 @@ final class KeychainStoreTests: XCTestCase {
 }
 
 final class OpenRouterApiKeyStoreTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        KeychainStore.serviceOverride = "test.openwhisper.\(UUID().uuidString)"
+    }
+
     override func tearDown() {
+        KeychainStore.serviceOverride = nil
         UserDefaults.standard.removeObject(forKey: AppGroup.cloudApiKeyKey)
         UserDefaults(suiteName: AppGroup.identifier)?.removeObject(forKey: AppGroup.cloudApiKeyKey)
         // OpenRouterApiKeyStore stores under a private account; the migration
-        // tests share the real keychain entry, so clear it (and the memory
-        // cache) between tests to keep them isolated.
+        // tests share the keychain entry, so clear it (and the memory cache)
+        // between tests to keep them isolated.
         KeychainStore.delete(account: "openrouter.apiKey")
         super.tearDown()
     }
@@ -77,6 +89,16 @@ final class OpenRouterApiKeyStoreTests: XCTestCase {
 }
 
 final class InstallIDTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        KeychainStore.serviceOverride = "test.openwhisper.\(UUID().uuidString)"
+    }
+
+    override func tearDown() {
+        KeychainStore.serviceOverride = nil
+        super.tearDown()
+    }
+
     func testIsStableAcrossReads() {
         let first = InstallID.value
         let second = InstallID.value

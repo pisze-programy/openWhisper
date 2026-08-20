@@ -25,6 +25,16 @@ Answers for the App Store Connect **Export Compliance** questionnaire for
 Select: **"No — the app does not use encryption other than the standard HTTPS
 provided by the system (URLSession)."**
 
+## Automating the answer (no questionnaire on every upload)
+
+The macOS and iOS Info.plist set **`ITSAppUsesNonExemptEncryption` = `false`**,
+which tells App Store Connect the app only uses exempt encryption (standard
+HTTPS/TLS). Once the key is present in the build, App Store Connect no longer
+asks the Export Compliance questionnaire on upload.
+
+- macOS: `openWhisperMac/Info.plist`
+- iOS: `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` in `project.pbxproj`
+
 ## Reference
 
 - All outbound URLs: `openrouter.ai/api/v1/...`, `huggingface.co/...`,

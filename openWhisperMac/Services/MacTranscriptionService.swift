@@ -37,15 +37,23 @@ final class MacTranscriptionService: TranscriptionProviding {
 
     // MARK: - Lifecycle
 
-    func warmUp() async {
+    /// Loads the speech model from disk if it is already downloaded. Never
+    /// triggers a download — used at app launch so a returning user gets STT
+    /// immediately and a new user simply stays "not ready" (the dictation guard
+    /// then shows the "No model yet" message).
+    func warmUpFromCache() async {
         guard !isWarmingUp, !isTranscribing, !isModelReady else { return }
+        let dir = Self.modelDirectory
+        guard FileManager.default.fileExists(atPath: dir.path),
+              AsrModels.modelsExist(at: dir, version: .v3) else {
+            return
+        }
         isWarmingUp = true
         isModelReady = false
         modelError = nil
         defer { isWarmingUp = false }
-
         do {
-            try await loadIfNeeded()
+            try await load(from: dir)
             isModelReady = true
             state = .ready
         } catch {
@@ -54,6 +62,62 @@ final class MacTranscriptionService: TranscriptionProviding {
             modelError = error.localizedDescription
             logger.error("Model warm-up failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// Explicitly downloads the speech model (if needed) and loads it. Called
+    /// from the model card's "Download" button — never automatically at launch.
+    func downloadAndWarmUp() async {
+        guard !isWarmingUp, !isTranscribing, !isModelReady else { return }
+        isWarmingUp = true
+        isModelReady = false
+        modelError = nil
+        defer { isWarmingUp = false }
+        do {
+            try await load(from: Self.modelDirectory, downloadIfNeeded: true)
+            isModelReady = true
+            state = .ready
+        } catch {
+            state = .failed(error.localizedDescription)
+            isModelReady = false
+            modelError = error.localizedDescription
+            logger.error("Model download failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Legacy cache directory used before the App Group move (sandbox-container
+    /// Application Support). Copied into the App Group on first launch.
+    private static var legacyModelDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("FluidAudio/Models/\(Repo.parakeetV3.folderName)", isDirectory: true)
+    }
+
+    /// Stable model location in the App Group container (team-scoped, survives
+    /// updates and bundle-id changes).
+    static var modelDirectory: URL {
+        AppGroup.containerURL
+            .appendingPathComponent("FluidAudio", isDirectory: true)
+            .appendingPathComponent("Models", isDirectory: true)
+            .appendingPathComponent(Repo.parakeetV3.folderName, isDirectory: true)
+    }
+
+    /// Copies a previously-downloaded model from the legacy (pre-App-Group)
+    /// location into the App Group container so an upgrade does not re-download.
+    /// Best-effort: leaves the source in place as a backup.
+    func migrateLegacyModelIfNeeded() {
+        let legacy = Self.legacyModelDirectory
+        let target = Self.modelDirectory
+        guard FileManager.default.fileExists(atPath: legacy.path),
+              !FileManager.default.fileExists(atPath: target.path),
+              AsrModels.modelsExist(at: legacy, version: .v3) else { return }
+        try? FileManager.default.createDirectory(
+            at: target.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try? FileManager.default.copyItem(at: legacy, to: target)
+    }
+
+    func warmUp() async {
+        await warmUpFromCache()
     }
 
     /// Blocks until the model is ready or the timeout elapses.
@@ -112,12 +176,17 @@ final class MacTranscriptionService: TranscriptionProviding {
 
     // MARK: - Model loading
 
-    private func loadIfNeeded() async throws {
+    private func load(from directory: URL, downloadIfNeeded: Bool = false) async throws {
         guard asrManager == nil else { return }
         state = .loading
 
         let start = Date()
-        let models = try await AsrModels.loadFromCache(version: .v3)
+        let models: AsrModels
+        if downloadIfNeeded {
+            models = try await AsrModels.downloadAndLoad(to: directory, version: .v3)
+        } else {
+            models = try await AsrModels.load(from: directory, version: .v3)
+        }
         let manager = AsrManager(config: .default, models: nil)
         try await manager.loadModels(models)
         asrManager = manager

@@ -42,7 +42,7 @@ struct MacModelCardView: View {
                             .foregroundStyle(.red)
                     }
                     Button {
-                        Task { await transcription.warmUp() }
+                        Task { await transcription.downloadAndWarmUp() }
                     } label: {
                         Label("Try Again", systemImage: "arrow.clockwise")
                     }
@@ -60,7 +60,7 @@ struct MacModelCardView: View {
                     }
                 } else {
                     Button {
-                        Task { await transcription.warmUp() }
+                        Task { await transcription.downloadAndWarmUp() }
                     } label: {
                         Label("Download Model", systemImage: "arrow.down.circle")
                             .frame(maxWidth: .infinity)
