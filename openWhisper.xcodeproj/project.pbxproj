@@ -54,6 +54,15 @@
 			);
 			target = 7865A19E301F54160036B816 /* OpenWhisperWidgetExtension */;
 		};
+		9E0F1A2B3C4D5E6F708192A3 /* Exceptions for "openWhisperMac" folder in "openWhisperMac" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				Info.entitlements,
+				Info-Store.entitlements,
+			);
+			target = 8C9D0E1F2030405060708090 /* openWhisperMac */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -72,6 +81,9 @@
 		};
 		7B8C9D0E1F20304050607080 /* openWhisperMac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9E0F1A2B3C4D5E6F708192A3 /* Exceptions for "openWhisperMac" folder in "openWhisperMac" target */,
+			);
 			path = openWhisperMac;
 			sourceTree = "<group>";
 		};
