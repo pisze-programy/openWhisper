@@ -253,6 +253,22 @@ public final class SettingsStore {
 
     public static let maxRecordingDuration: TimeInterval = 600
 
+    /// When no OpenRouter API key is configured, AI formatting and translation
+    /// cannot run. Force the stored style/target back to None so the UI never
+    /// shows a stale "Casual"/"English" selection that would silently fail.
+    /// Called at launch and whenever the key is removed.
+    public func resetCloudFeaturesIfNoKey() {
+        guard !OpenRouterApiKeyStore.hasValue else { return }
+        if formattingStyle != .none {
+            formattingStyle = .none
+            UserDefaults.standard.set(TranscriptionStyle.none.rawValue, forKey: "settings.formattingStyle")
+        }
+        if translationTargetCode != nil {
+            translationTargetCode = nil
+            UserDefaults.standard.set(nil, forKey: "settings.translationTargetCode")
+        }
+    }
+
     /// App-side read of the silence auto-stop toggle (default on).
     public static var silenceAutoStopEnabled: Bool {
         UserDefaults.standard.object(forKey: AppGroup.autoStopOnSilenceKey) as? Bool ?? true

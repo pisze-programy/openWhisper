@@ -47,8 +47,11 @@ public enum KeychainStore {
         return added || removed
     }
 
-    /// Reads the stored value for `account`, or nil when absent. Cached after
-    /// the first read; `set`/`delete` clear the cache entry.
+    /// Reads the stored value for `account`, or nil when absent. Successful
+    /// reads (including a legitimate "not found") are cached; failed reads
+    /// (e.g. `errSecInteractionNotAllowed` while the keychain is still locked
+    /// at login) are NOT cached so the next read retries instead of returning a
+    /// stale nil forever.
     public static func string(forAccount account: String) -> String? {
         cacheLock.lock()
         if let cached = cache[account] {
@@ -66,6 +69,14 @@ public enum KeychainStore {
         ]
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        // Only cache when the keychain answered authoritatively. On transient
+        // errors (locked keychain, user cancels the prompt, etc.) leave the
+        // cache empty so a later read can succeed.
+        if status != errSecSuccess && status != errSecItemNotFound {
+            return nil
+        }
+
         let value: String?
         if status == errSecSuccess, let data = item as? Data {
             value = String(data: data, encoding: .utf8)

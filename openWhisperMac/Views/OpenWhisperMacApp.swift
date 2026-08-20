@@ -52,6 +52,7 @@ struct OpenWhisperMacApp: App {
             MacRootView()
                 .environment(settings)
                 .environment(modelDownload)
+                .environment(MacTranscriptionService.shared)
                 .environment(toast)
                 .environment(corrections)
                 .environment(clipboard)
@@ -66,6 +67,7 @@ struct OpenWhisperMacApp: App {
             SetupWindow()
                 .environment(settings)
                 .environment(modelDownload)
+                .environment(MacTranscriptionService.shared)
                 .environment(PermissionManager.shared)
         }
         .windowStyle(.hiddenTitleBar)

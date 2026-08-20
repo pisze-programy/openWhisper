@@ -10,7 +10,7 @@ struct DictationView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsSection("Speech Model") {
-                    ModelCardView()
+                    MacModelCardView()
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                 }

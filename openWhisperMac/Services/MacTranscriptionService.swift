@@ -2,16 +2,21 @@ import Foundation
 import FluidAudio
 import OpenWhisperShared
 import os
+import Observation
 
 /// macOS speech-to-text backend built on FluidAudio (Parakeet TDT v3, proven
 /// fast on Apple Silicon). Owns the model lifecycle and exposes the shared
 /// `TranscriptionProviding` surface; nothing above this type knows about the
 /// underlying engine.
-@MainActor
+@MainActor @Observable
 final class MacTranscriptionService: TranscriptionProviding {
+    static let shared = MacTranscriptionService()
+
     private(set) var isModelReady = false
     private(set) var isWarmingUp = false
     private(set) var isTranscribing = false
+    /// Last model-loading failure, shown in the model card. Cleared on retry.
+    private(set) var modelError: String?
 
     private var asrManager: AsrManager?
     private var state: ModelState = .idle
@@ -36,6 +41,7 @@ final class MacTranscriptionService: TranscriptionProviding {
         guard !isWarmingUp, !isTranscribing, !isModelReady else { return }
         isWarmingUp = true
         isModelReady = false
+        modelError = nil
         defer { isWarmingUp = false }
 
         do {
@@ -45,6 +51,7 @@ final class MacTranscriptionService: TranscriptionProviding {
         } catch {
             state = .failed(error.localizedDescription)
             isModelReady = false
+            modelError = error.localizedDescription
             logger.error("Model warm-up failed: \(error.localizedDescription, privacy: .public)")
         }
     }

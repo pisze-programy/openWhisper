@@ -12,7 +12,9 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsSection("API Key") {
-                    ApiKeyRow(placeholder: "sk-or-...")
+                    ApiKeyRow(placeholder: "sk-or-...") {
+                        settings.resetCloudFeaturesIfNoKey()
+                    }
                     ShortcutHintRow(
                         icon: "key.fill",
                         tint: .secondary,
@@ -76,7 +78,8 @@ struct SettingsView: View {
                         title: "Accessibility",
                         granted: permissionManager.accessibilityStatus.isGranted,
                         actionTitle: "Open System Settings",
-                        action: { permissionManager.openAccessibilitySettings() }
+                        action: { permissionManager.openAccessibilitySettings() },
+                        showRestartHint: true
                     )
                 }
 
@@ -101,6 +104,11 @@ struct SettingsView: View {
         }
         .background(.regularMaterial)
         .navigationTitle("Settings")
+        // macOS may take a moment (or an app restart) to reflect an
+        // Accessibility grant; poll so the row updates in place.
+        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
+            permissionManager.refresh()
+        }
     }
 }
 
@@ -209,19 +217,29 @@ private struct PermissionStatusRow: View {
     let granted: Bool
     let actionTitle: String
     let action: () -> Void
+    /// Shows a hint under the row when the permission is still reported as
+    /// not-granted (e.g. Accessibility needs an app restart to be picked up).
+    var showRestartHint: Bool = false
 
     var body: some View {
-        HStack {
-            Text(title)
-                .font(.callout)
-            Spacer()
-            if granted {
-                Label("Granted", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            } else {
-                Button(actionTitle, action: action)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.callout)
+                Spacer()
+                if granted {
+                    Label("Granted", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Button(actionTitle, action: action)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            }
+            if !granted && showRestartHint {
+                Text("Granted in System Settings but still grey here? macOS sometimes needs OpenWhisper to be restarted.")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
             }
         }
         .padding(.horizontal, 14)
@@ -231,6 +249,9 @@ private struct PermissionStatusRow: View {
 
 struct ApiKeyRow: View {
     let placeholder: String
+    /// Called after the key changes (added, edited, or cleared) so the store
+    /// can reset cloud-dependent state (style/target) when the key is removed.
+    var onKeyChange: () -> Void = {}
     @State private var text: String = ""
 
     var body: some View {
@@ -244,6 +265,7 @@ struct ApiKeyRow: View {
                 .font(.system(.body, design: .monospaced))
                 .onChange(of: text) { _, newValue in
                     OpenRouterApiKeyStore.set(newValue)
+                    onKeyChange()
                 }
         }
         .padding(.horizontal, 14)

@@ -38,7 +38,6 @@ struct SetupWindow: View {
                         advance()
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(step == .model && !modelDownload.isReady)
                 }
             }
             .padding()
@@ -46,6 +45,13 @@ struct SetupWindow: View {
         }
         .frame(width: 760, height: 540)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            permissionManager.refresh()
+        }
+        // macOS can take a moment (or an app restart) to reflect an
+        // Accessibility grant. Poll so the checkmark appears without the user
+        // having to leave and re-enter the window.
+        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
+            guard step == .permissions else { return }
             permissionManager.refresh()
         }
         .onAppear {
@@ -96,6 +102,14 @@ struct SetupWindow: View {
                         permissionManager.openAccessibilitySettings()
                     }
                 )
+
+                if permissionManager.accessibilityStatus == .denied {
+                    Text("Granted in System Settings but still grey here? macOS sometimes needs OpenWhisper to be restarted.")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                }
             }
 
             Spacer()
@@ -113,7 +127,21 @@ struct SetupWindow: View {
             Text("Download the speech model")
                 .font(.title2.bold())
 
-            ModelCardView()
+            MacModelCardView()
+
+            Text("You can skip this — dictation will show an error until the model is downloaded.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.leading, 4)
+
+            HStack {
+                Spacer()
+                Button("Skip") {
+                    step = .finish
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
 
             Text("Your audio stays on your device. Optional AI formatting and translation send the transcript text to the OpenRouter provider.")
                 .font(.callout)

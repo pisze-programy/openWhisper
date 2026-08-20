@@ -76,6 +76,18 @@ final class DictationOrchestrator {
     func startRecording() {
         guard phase == .idle || phase == .done || isError(phase) else { return }
 
+        // Never record without a ready speech model: without this the app would
+        // silently start a hidden model download and leave the overlay hanging.
+        guard transcription.isModelReady else {
+            sounds.play(.error)
+            StatusOverlayPanel.shared.showMessage(
+                title: "Settings: No model yet..",
+                icon: .error,
+                duration: 2.0
+            )
+            return
+        }
+
         targetAppProcessID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         StatusOverlayPanel.shared.activeAppIcon = NSWorkspace.shared.frontmostApplication?.icon
         recordingStyle = settings.formattingStyle

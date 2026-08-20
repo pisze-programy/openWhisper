@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var sharedContainer: ModelContainer?
 
     private let recorder = MacRecorder()
-    private let transcription = MacTranscriptionService()
+    private let transcription = MacTranscriptionService.shared
     private let modelDownload = ModelDownloadManager.shared
     private var sleepObserver: SystemSleepObserver?
 
@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ModelDownloadManager.shared.refreshStatus()
 
         let settings = SettingsStore.shared
+        settings.resetCloudFeaturesIfNoKey()
         let pipeline = PostProcessingPipeline()
         let corrections = CorrectionsStore.shared
 
